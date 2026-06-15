@@ -23,7 +23,7 @@ jobs:
     needs: ci
     environment: production
     timeout-minutes: 45
-    if: github.repository == 'Plugio-ai/plugio-admin'
+    if: github.repository == 'TheBuilderStudio/plugio-admin'
 
     steps:
       - name: Configure git safe directories
