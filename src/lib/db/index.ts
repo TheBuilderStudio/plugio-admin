@@ -37,6 +37,7 @@ export const pool = mysql.createPool({
   database: process.env.DB_NAME!,
   user: process.env.DB_USERNAME!,
   password: process.env.DB_PASSWORD!,
+  ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : undefined,
 
   // Pool configuration
   waitForConnections: true,
