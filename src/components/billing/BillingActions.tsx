@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Loader2, ShieldCheck, Clock, XCircle } from "lucide-react";
 import { grantTrial, grantLifetime, revokeAccess } from "@/actions/billing.actions";
 
+const IS_READ_ONLY = process.env.NEXT_PUBLIC_READ_ONLY_MODE === "true";
+
 export function BillingActions({ userId }: { userId: string }) {
   const router = useRouter();
   const [isPendingTrial, startTrial] = useTransition();
@@ -60,6 +62,18 @@ export function BillingActions({ userId }: { userId: string }) {
         setResult({ type: "error", message: res.error ?? "Failed to revoke access" });
       }
     });
+  }
+
+  if (IS_READ_ONLY) {
+    return (
+      <div className="mt-5 border-t border-zinc-100 pt-5">
+        <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-center">
+          <p className="text-xs text-blue-600 font-medium">
+            Admin Panel is in Read-Only Mode. Billing modifications disabled.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

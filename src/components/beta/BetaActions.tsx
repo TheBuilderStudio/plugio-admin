@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { approveBetaAction, rejectBetaAction } from "@/actions/beta.actions";
 
+const IS_READ_ONLY = process.env.NEXT_PUBLIC_READ_ONLY_MODE === "true";
+
 interface BetaActionsProps {
   userId: string;
   currentStatus: string | null | undefined;
@@ -58,6 +60,16 @@ export function BetaActions({ userId, currentStatus }: BetaActionsProps) {
         <p className="text-xs text-zinc-500 font-medium">
           This application has already been{" "}
           {currentStatus === "APPROVED" ? "approved" : "rejected"}.
+        </p>
+      </div>
+    );
+  }
+
+  if (IS_READ_ONLY) {
+    return (
+      <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-center">
+        <p className="text-xs text-blue-600 font-medium">
+          Admin Panel is in Read-Only Mode. Modifications disabled.
         </p>
       </div>
     );
