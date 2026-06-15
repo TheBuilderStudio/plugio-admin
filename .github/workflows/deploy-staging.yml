@@ -1,0 +1,56 @@
+name: Deploy Admin — Staging
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-admin-staging
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/admin-ci.yml
+
+  deploy:
+    name: Deploy to Staging VPS
+    runs-on: [self-hosted, plugio-vps]
+    needs: ci
+    environment: staging
+    timeout-minutes: 45
+    if: github.repository == 'Plugio-ai/plugio-admin'
+
+    steps:
+      - name: Configure git safe directories
+        run: |
+          git config --global --add safe.directory "$HOME/plugio/plugio-backend"
+          git config --global --add safe.directory "$HOME/plugio/plugio-admin"
+
+      - name: Check staging is configured on VPS
+        id: staging
+        run: |
+          if [[ -f "$HOME/plugio/plugio-backend/.env.staging" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Staging deploy skipped — create .env.staging on the VPS (see plugio-backend/.env.staging.example)."
+          fi
+
+      - name: Sync and deploy staging admin
+        if: steps.staging.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          cd ~/plugio/plugio-admin
+          git fetch origin develop
+          git checkout develop
+          git reset --hard origin/develop
+          cd ~/plugio/plugio-backend
+          git fetch origin develop
+          git checkout develop
+          git reset --hard origin/develop
+          sg docker -c 'bash deploy/vps-deploy-staging.sh admin'

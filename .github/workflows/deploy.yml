@@ -1,0 +1,45 @@
+name: Deploy Admin — Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: plugio-production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/admin-ci.yml
+
+  deploy:
+    name: Deploy to Production VPS
+    runs-on: [self-hosted, plugio-vps]
+    needs: ci
+    environment: production
+    timeout-minutes: 45
+    if: github.repository == 'Plugio-ai/plugio-admin'
+
+    steps:
+      - name: Configure git safe directories
+        run: |
+          git config --global --add safe.directory "$HOME/plugio/plugio-backend"
+          git config --global --add safe.directory "$HOME/plugio/plugio-admin"
+
+      - name: Sync and deploy admin
+        run: |
+          set -euo pipefail
+          cd ~/plugio/plugio-admin
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+          cd ~/plugio/plugio-backend
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+          sg docker -c 'bash deploy/vps-deploy.sh admin'
