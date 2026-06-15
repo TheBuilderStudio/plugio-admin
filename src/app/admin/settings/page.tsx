@@ -1,6 +1,5 @@
 import { Server, Database, Globe, Info, Activity } from "lucide-react";
 import { requireAdmin } from "@/lib/security";
-import { auth } from "@/auth";
 import { testConnection } from "@/lib/db";
 import { APP_VERSION, ENVIRONMENT, ADMIN_EMAILS } from "@/constants";
 import { formatDateTime } from "@/lib/utils";
@@ -71,7 +70,7 @@ export default async function SettingsPage() {
                 status={dbConnected ? "connected" : "error"}
                 detail={
                   dbConnected
-                    ? `${process.env.DB_HOST}:${process.env.DB_PORT ?? "3306"}`
+                    ? `${(process.env.DB_HOST ?? "").split(".")[0]}… :${process.env.DB_PORT ?? "3306"}`
                     : "Connection failed"
                 }
               />

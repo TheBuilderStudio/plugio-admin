@@ -20,6 +20,7 @@ import type {
   RecentActivityItem,
   PaginatedResult,
   DbSocialAccount,
+  DbPaymentAuditEvent,
 } from "@/types";
 
 // ─── Dashboard ────────────────────────────────────────────
@@ -64,7 +65,11 @@ export const getDashboardStats = unstable_cache(
  */
 export const getRecentActivity = unstable_cache(
   cache(async (limit = 10): Promise<RecentActivityItem[]> => {
-    const safeLimit = Number(limit);
+    // Clamp to a safe integer — UNION sub-queries don't support ? placeholders
+    // for LIMIT in all MySQL versions, so we validate strictly here.
+    const safeLimit = Math.min(Math.max(1, Math.floor(Number(limit))), 100);
+    if (!Number.isFinite(safeLimit)) throw new Error("Invalid limit");
+
     const [rows] = await pool.execute<any[]>(
       `
       (
@@ -137,6 +142,9 @@ export async function getUsers(
     filterClause = "AND (s.subscription_status IS NULL OR s.subscription_status NOT IN ('ACTIVE', 'TRIALING'))";
   }
 
+  const safePageSize = Math.min(Math.max(1, Math.floor(pageSize)), 200);
+  const safeOffset = Math.max(0, Math.floor(offset));
+
   const [rows] = await pool.execute<any[]>(
     `
     SELECT
@@ -152,7 +160,7 @@ export async function getUsers(
     LEFT JOIN subscriptions s ON s.user_id = u.id
     WHERE (u.name LIKE ? OR u.email LIKE ?) ${filterClause}
     ORDER BY u.created_at DESC
-    LIMIT ${Number(pageSize)} OFFSET ${Number(offset)}
+    LIMIT ${safePageSize} OFFSET ${safeOffset}
   `,
     [searchPattern, searchPattern]
   );
@@ -294,6 +302,9 @@ export async function getBetaRequests(
 
   const statusClause = safeStatus ? "AND access_status = ?" : "";
 
+  const safePageSize = Math.min(Math.max(1, Math.floor(pageSize)), 200);
+  const safeOffset = Math.max(0, Math.floor(offset));
+
   const [rows] = await pool.execute<any[]>(
     `SELECT
       id, name, email, picture,
@@ -305,7 +316,7 @@ export async function getBetaRequests(
       AND (name LIKE ? OR email LIKE ?)
       ${statusClause}
     ORDER BY beta_application_submitted_at DESC
-    LIMIT ${Number(pageSize)} OFFSET ${Number(offset)}`,
+    LIMIT ${safePageSize} OFFSET ${safeOffset}`,
     baseParams
   );
 
@@ -407,16 +418,11 @@ export async function getUserEmailById(
 // ─── Helpers ──────────────────────────────────────────────
 
 /**
- * Escape a string for safe use in SQL LIKE patterns only.
- * This is ONLY for LIKE patterns — use parameterized queries for values.
+ * Escape special characters in a search string for safe use in SQL LIKE patterns.
+ * Always use alongside parameterized queries — never string-interpolate user input.
  */
 export function escapeLikePattern(input: string): string {
   return input.replace(/[%_\\]/g, "\\$&");
-}
-
-/** Internal helper — NOT for user input, only for enum values */
-function mysql_escape(value: string): string {
-  return `'${value.replace(/'/g, "\\'")}'`;
 }
 
 // ─── Payment Audit Events ──────────────────────────────────
@@ -424,12 +430,21 @@ function mysql_escape(value: string): string {
 /**
  * Fetch all payment audit events for a specific user
  */
-export async function getPaymentAuditEventsForUser(userId: string): Promise<any[]> {
+export async function getPaymentAuditEventsForUser(
+  userId: string
+): Promise<DbPaymentAuditEvent[]> {
   const [rows] = await pool.execute<any[]>(
-    `SELECT * FROM payment_audit_events WHERE user_id = ? ORDER BY created_at DESC`,
+    `SELECT id, user_id, provider, event_type, event_key, order_id, payment_id, status, details, created_at
+     FROM payment_audit_events
+     WHERE user_id = ?
+     ORDER BY created_at DESC
+     LIMIT 50`,
     [userId]
   );
-  return rows;
+  return rows.map((r) => ({
+    ...r,
+    created_at: new Date(r.created_at),
+  }));
 }
 
 /**
@@ -438,19 +453,21 @@ export async function getPaymentAuditEventsForUser(userId: string): Promise<any[
 export async function getGlobalPaymentAuditEvents(
   page: number,
   pageSize: number = 20
-): Promise<any> {
-  const offset = (page - 1) * pageSize;
+): Promise<PaginatedResult<DbPaymentAuditEvent & { user_name: string | null; user_email: string | null }>> {
+  const safePageSize = Math.min(Math.max(1, Math.floor(pageSize)), 200);
+  const safeOffset = Math.max(0, Math.floor((page - 1) * safePageSize));
 
   const [rows] = await pool.execute<any[]>(
     `
     SELECT
-      p.*,
-      u.name as user_name,
-      u.email as user_email
+      p.id, p.user_id, p.provider, p.event_type, p.event_key,
+      p.order_id, p.payment_id, p.status, p.details, p.created_at,
+      u.name AS user_name,
+      u.email AS user_email
     FROM payment_audit_events p
     LEFT JOIN users u ON u.id = p.user_id
     ORDER BY p.created_at DESC
-    LIMIT ${Number(pageSize)} OFFSET ${Number(offset)}
+    LIMIT ${safePageSize} OFFSET ${safeOffset}
   `
   );
 
@@ -461,10 +478,10 @@ export async function getGlobalPaymentAuditEvents(
   const total = Number(countRows[0]?.total ?? 0);
 
   return {
-    items: rows,
+    items: rows.map((r) => ({ ...r, created_at: new Date(r.created_at) })),
     total,
     page,
-    pageSize,
-    totalPages: Math.ceil(total / pageSize),
+    pageSize: safePageSize,
+    totalPages: Math.ceil(total / safePageSize),
   };
 }

@@ -7,7 +7,7 @@ export default async function AuditLogsPage() {
   await requireAdmin();
 
   // Read up to the last 500 actions
-  const logs = await Promise.resolve(readRecentAuditLogs(500));
+  const logs = await readRecentAuditLogs(500);
 
   return (
     <div className="p-6 md:p-8 max-w-[1200px] mx-auto min-h-screen space-y-6 lg:space-y-8">
@@ -50,9 +50,9 @@ export default async function AuditLogsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
-                {logs.map((log, i) => (
+                {logs.map((log) => (
                   <tr
-                    key={i}
+                    key={`${log.timestamp}-${log.adminEmail}-${log.action}`}
                     className="hover:bg-neutral-50/50 transition-colors"
                   >
                     <td className="px-6 py-4">

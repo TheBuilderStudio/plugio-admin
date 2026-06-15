@@ -45,13 +45,15 @@ export function validateSearch(input: unknown): string {
   // Trim and limit length
   let sanitized = input.trim().slice(0, MAX_SEARCH_LENGTH);
 
-  // Check for suspicious SQL patterns (defense in depth — queries are parameterized anyway)
+  // Check for suspicious SQL patterns (defense in depth — queries are parameterized anyway).
+  // NOTE: Do NOT use /g flag here — RegExp.test() with /g is stateful (lastIndex),
+  // which alternates between true/false on successive calls against the same string.
   const suspiciousPatterns = [
-    /--/g, // SQL comment
-    /\/\*/g, // Block comment
-    /;\s*(DROP|DELETE|UPDATE|INSERT|CREATE|ALTER)/gi, // Statement chaining
-    /\bUNION\b/gi, // UNION injection
-    /\bOR\b\s+\d+\s*=\s*\d+/gi, // OR 1=1
+    /--/, // SQL comment
+    /\/\*/, // Block comment
+    /;\s*(DROP|DELETE|UPDATE|INSERT|CREATE|ALTER)/i, // Statement chaining
+    /\bUNION\b/i, // UNION injection
+    /\bOR\b\s+\d+\s*=\s*\d+/i, // OR 1=1
   ];
 
   for (const pattern of suspiciousPatterns) {

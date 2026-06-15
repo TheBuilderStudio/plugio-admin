@@ -2,11 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/security";
+import { validateUserId } from "@/lib/validation";
 import { pool } from "@/lib/db";
 import { logAdminAction } from "@/lib/logger";
 
 export async function grantTrial(userId: string, days: number = 14) {
   const session = await requireAdmin();
+
+  // Validate userId before any DB operation — matches beta.actions.ts pattern
+  const validUserId = validateUserId(userId);
 
   try {
     const trialEndsAt = new Date();
@@ -22,26 +26,27 @@ export async function grantTrial(userId: string, days: number = 14) {
         has_used_trial = 1,
         updated_at = NOW(6)
       `,
-      [userId, trialEndsAt, trialEndsAt]
+      [validUserId, trialEndsAt, trialEndsAt]
     );
 
     logAdminAction({
-      action: "BETA_APPROVE", // Reuse or add BILLING_UPDATE
-      adminEmail: session.user?.email || "Unknown",
-      targetUserId: userId,
-      details: `Granted ${days} day trial`,
+      action: "USER_ENABLE",
+      adminEmail: session.user?.email ?? "Unknown",
+      targetUserId: validUserId,
+      details: `Granted ${days}-day trial`,
     });
 
-    revalidatePath(`/admin/users/${userId}`);
-    return { success: true, message: `Granted ${days} day trial` };
+    revalidatePath(`/admin/users/${validUserId}`);
+    return { success: true, message: `Granted ${days}-day trial` };
   } catch (error: any) {
-    console.error("grantTrial error:", error);
-    return { success: false, error: "Failed to grant trial" };
+    console.error("[grantTrial] Error:", error);
+    return { success: false, message: "Failed to grant trial", error: "Failed to grant trial" };
   }
 }
 
 export async function grantLifetime(userId: string) {
   const session = await requireAdmin();
+  const validUserId = validateUserId(userId);
 
   try {
     // Set pro_period_end_at to 100 years from now
@@ -57,26 +62,27 @@ export async function grantLifetime(userId: string) {
         pro_period_end_at = ?,
         updated_at = NOW(6)
       `,
-      [userId, lifetimeEnd, lifetimeEnd]
+      [validUserId, lifetimeEnd, lifetimeEnd]
     );
 
     logAdminAction({
       action: "USER_ENABLE",
-      adminEmail: session.user?.email || "Unknown",
-      targetUserId: userId,
-      details: `Granted Lifetime PRO`,
+      adminEmail: session.user?.email ?? "Unknown",
+      targetUserId: validUserId,
+      details: "Granted Lifetime PRO access",
     });
 
-    revalidatePath(`/admin/users/${userId}`);
-    return { success: true, message: "Granted Lifetime Access" };
+    revalidatePath(`/admin/users/${validUserId}`);
+    return { success: true, message: "Granted Lifetime PRO access" };
   } catch (error: any) {
-    console.error("grantLifetime error:", error);
-    return { success: false, error: "Failed to grant lifetime access" };
+    console.error("[grantLifetime] Error:", error);
+    return { success: false, message: "Failed to grant lifetime access", error: "Failed to grant lifetime access" };
   }
 }
 
 export async function revokeAccess(userId: string) {
   const session = await requireAdmin();
+  const validUserId = validateUserId(userId);
 
   try {
     await pool.execute(
@@ -86,20 +92,20 @@ export async function revokeAccess(userId: string) {
           updated_at = NOW(6)
       WHERE user_id = ?
       `,
-      [userId]
+      [validUserId]
     );
 
     logAdminAction({
       action: "USER_DISABLE",
-      adminEmail: session.user?.email || "Unknown",
-      targetUserId: userId,
-      details: `Revoked billing access (EXPIRED)`,
+      adminEmail: session.user?.email ?? "Unknown",
+      targetUserId: validUserId,
+      details: "Revoked billing access (EXPIRED)",
     });
 
-    revalidatePath(`/admin/users/${userId}`);
-    return { success: true, message: "Revoked access" };
+    revalidatePath(`/admin/users/${validUserId}`);
+    return { success: true, message: "Billing access revoked" };
   } catch (error: any) {
-    console.error("revokeAccess error:", error);
-    return { success: false, error: "Failed to revoke access" };
+    console.error("[revokeAccess] Error:", error);
+    return { success: false, message: "Failed to revoke access", error: "Failed to revoke access" };
   }
 }

@@ -167,7 +167,10 @@ export interface AdminAuditLog {
     | "BETA_APPROVE"
     | "BETA_REJECT"
     | "USER_DISABLE"
-    | "USER_ENABLE";
+    | "USER_ENABLE"
+    | "BILLING_TRIAL_GRANT"
+    | "BILLING_LIFETIME_GRANT"
+    | "BILLING_REVOKE";
   adminEmail: string;
   targetUserId?: string;
   targetEmail?: string;

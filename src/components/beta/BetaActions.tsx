@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { approveBetaAction, rejectBetaAction } from "@/actions/beta.actions";
@@ -20,6 +20,13 @@ export function BetaActions({ userId, currentStatus }: BetaActionsProps) {
   } | null>(null);
 
   const isLoading = isPendingApprove || isPendingReject;
+
+  // Auto-clear feedback banner after 4 seconds
+  useEffect(() => {
+    if (!result) return;
+    const timer = setTimeout(() => setResult(null), 4000);
+    return () => clearTimeout(timer);
+  }, [result]);
 
   async function handleApprove() {
     startApprove(async () => {

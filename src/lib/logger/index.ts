@@ -17,7 +17,7 @@
  * Loki, CloudWatch). The file is rotated manually or via logrotate.
  */
 
-import fs from "fs";
+import { appendFile, mkdir, readFile, access } from "fs/promises";
 import path from "path";
 import type { AdminAuditLog } from "@/types";
 
@@ -25,9 +25,8 @@ const LOG_DIR = path.join(process.cwd(), "logs");
 const LOG_FILE = path.join(LOG_DIR, "admin-audit.log");
 
 /**
- * Append an audit log entry.
- * This is a synchronous write (appendFileSync) to guarantee the log
- * is written before the function returns — important for security events.
+ * Append an audit log entry asynchronously.
+ * Non-blocking — never crashes the request if the write fails.
  */
 export function logAdminAction(params: Omit<AdminAuditLog, "timestamp">): void {
   const entry: AdminAuditLog = {
@@ -37,39 +36,36 @@ export function logAdminAction(params: Omit<AdminAuditLog, "timestamp">): void {
 
   const line = JSON.stringify(entry) + "\n";
 
-  try {
-    // Ensure log directory exists
-    if (!fs.existsSync(LOG_DIR)) {
-      fs.mkdirSync(LOG_DIR, { recursive: true });
+  // Fire-and-forget: write asynchronously, never block the request
+  (async () => {
+    try {
+      await mkdir(LOG_DIR, { recursive: true });
+      await appendFile(LOG_FILE, line, { encoding: "utf8" });
+    } catch (err) {
+      // Never crash the app due to logging infrastructure failures
+      console.error("[plugio-admin] Failed to write audit log:", err);
     }
+  })();
 
-    // Append to log file (creates if doesn't exist)
-    fs.appendFileSync(LOG_FILE, line, { encoding: "utf8", flag: "a" });
-  } catch (err) {
-    // Never crash the app due to a logging failure
-    // Console.error is acceptable for logging infrastructure errors
-    console.error("[plugio-admin] Failed to write audit log:", err);
-  }
-
-  // Always also log to console for development visibility
+  // Always echo to console for real-time visibility in dev/staging
   console.log("[ADMIN AUDIT]", entry);
 }
 
 /**
- * Read recent audit log entries (for Settings page).
- * Returns the last N entries from the log file.
+ * Read recent audit log entries (for the Audit page).
+ * Returns the last N entries from the log file, newest first.
  */
-export function readRecentAuditLogs(limit = 20): AdminAuditLog[] {
+export async function readRecentAuditLogs(limit = 20): Promise<AdminAuditLog[]> {
   try {
-    if (!fs.existsSync(LOG_FILE)) return [];
-
-    const content = fs.readFileSync(LOG_FILE, "utf8");
+    // Check existence without throwing
+    await access(LOG_FILE);
+    const content = await readFile(LOG_FILE, "utf8");
     const lines = content
       .trim()
       .split("\n")
       .filter((l) => l.trim());
 
-    // Return last N entries
+    // Return last N entries in reverse-chronological order
     return lines
       .slice(-limit)
       .reverse()
