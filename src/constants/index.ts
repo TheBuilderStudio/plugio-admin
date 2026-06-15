@@ -8,7 +8,8 @@
 
 export const ADMIN_EMAILS: string[] = [
   "manavhustles@gmail.com",
-  "427rohotkumar@gmail.com",
+  "427rohitkumar@gmail.com",
+  "admin@plugio.app",
 ];
 
 export const APP_NAME = "Plugio Admin";
