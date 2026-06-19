@@ -17,13 +17,16 @@
 import mysql from "mysql2/promise";
 
 // Validate required env vars at module load time (fail fast on misconfiguration)
+// Skip validation during Next.js build phase to allow Docker compilation without runtime env secrets.
 const requiredEnvVars = ["DB_HOST", "DB_NAME", "DB_USERNAME", "DB_PASSWORD"];
-for (const envVar of requiredEnvVars) {
-  if (!process.env[envVar]) {
-    throw new Error(
-      `[plugio-admin] Missing required environment variable: ${envVar}. ` +
-        `Copy .env.local.example to .env.local and fill in values.`
-    );
+if (process.env.NEXT_PHASE !== "phase-production-build") {
+  for (const envVar of requiredEnvVars) {
+    if (!process.env[envVar]) {
+      throw new Error(
+        `[plugio-admin] Missing required environment variable: ${envVar}. ` +
+          `Copy .env.local.example to .env.local and fill in values.`
+      );
+    }
   }
 }
 
@@ -32,11 +35,11 @@ for (const envVar of requiredEnvVars) {
  * Use `pool.execute(sql, params)` for all queries — never string interpolation.
  */
 export const pool = mysql.createPool({
-  host: process.env.DB_HOST!,
+  host: process.env.DB_HOST || "localhost",
   port: parseInt(process.env.DB_PORT ?? "3306", 10),
-  database: process.env.DB_NAME!,
-  user: process.env.DB_USERNAME!,
-  password: process.env.DB_PASSWORD!,
+  database: process.env.DB_NAME || "temp_db",
+  user: process.env.DB_USERNAME || "temp_user",
+  password: process.env.DB_PASSWORD || "temp_password",
   ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : undefined,
 
   // Pool configuration
