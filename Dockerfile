@@ -44,10 +44,9 @@ RUN addgroup --system --gid 1001 nodejs \
 # Pre-create the .next directory with correct ownership.
 RUN mkdir -p .next && chown nextjs:nodejs .next
 
-# Copy the standalone server bundle, static assets, and public directory.
+# Copy the standalone server bundle and static assets.
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static    ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public          ./public
 
 # Drop privileges before the process starts.
 USER nextjs
