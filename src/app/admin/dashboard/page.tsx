@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { requireAdmin } from "@/lib/security";
 import { getDashboardStats, getRecentActivity } from "@/lib/db/queries";
+import { getActiveDbContext } from "@/lib/db";
 import { formatRelativeTime } from "@/lib/utils";
 
 export const revalidate = 60;
@@ -22,9 +23,10 @@ export const revalidate = 60;
 export default async function DashboardPage() {
   const admin = await requireAdmin();
 
+  const dbContext = getActiveDbContext();
   const [stats, activity] = await Promise.all([
-    getDashboardStats(),
-    getRecentActivity(8),
+    getDashboardStats(dbContext),
+    getRecentActivity(8, dbContext),
   ]);
 
   const statCards = [

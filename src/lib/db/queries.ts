@@ -32,7 +32,7 @@ import type {
  * This mirrors User.hasFullPlatformBetaAccess() from the Spring Boot backend.
  */
 export const getDashboardStats = unstable_cache(
-  cache(async (): Promise<DashboardStats> => {
+  cache(async (dbContext: string): Promise<DashboardStats> => {
     const [rows] = await pool.execute<any[]>(`
       SELECT
         COUNT(*)                                                                                     AS total_users,
@@ -64,7 +64,7 @@ export const getDashboardStats = unstable_cache(
  * Shows latest registrations, beta applications, approvals, and rejections.
  */
 export const getRecentActivity = unstable_cache(
-  cache(async (limit = 10): Promise<RecentActivityItem[]> => {
+  cache(async (limit = 10, dbContext: string): Promise<RecentActivityItem[]> => {
     // Clamp to a safe integer — UNION sub-queries don't support ? placeholders
     // for LIMIT in all MySQL versions, so we validate strictly here.
     const safeLimit = Math.min(Math.max(1, Math.floor(Number(limit))), 100);
