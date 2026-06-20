@@ -59,6 +59,7 @@ interface AdminSidebarProps {
   adminName: string | null | undefined;
   adminEmail: string | null | undefined;
   adminImage: string | null | undefined;
+  hasStagingDb?: boolean;
 }
 
 function getCookie(name: string): string | undefined {
@@ -73,6 +74,7 @@ export function AdminSidebar({
   adminName,
   adminEmail,
   adminImage,
+  hasStagingDb = true,
 }: AdminSidebarProps) {
   const pathname = usePathname();
   const [dbContext, setDbContext] = useState<"production" | "staging">("production");
@@ -126,7 +128,9 @@ export function AdminSidebar({
             className="w-full bg-[#0D0C0B] border border-white/10 hover:border-white/20 rounded-lg px-3 py-2 text-xs font-semibold text-neutral-300 focus:outline-none focus:border-[#FF6719] cursor-pointer appearance-none transition-colors"
           >
             <option value="production">Production DB</option>
-            <option value="staging">Staging DB</option>
+            <option value="staging">
+              {hasStagingDb ? "Staging DB" : "Staging DB (Fallback)"}
+            </option>
           </select>
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-neutral-500">
             <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -134,6 +138,11 @@ export function AdminSidebar({
             </svg>
           </div>
         </div>
+        {!hasStagingDb && dbContext === "staging" && (
+          <p className="text-[10px] text-amber-500/80 mt-2 leading-relaxed">
+            ⚠️ Staging database is not configured on this environment. Falling back to active DB.
+          </p>
+        )}
       </div>
 
       {/* Navigation */}

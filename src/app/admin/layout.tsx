@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { ADMIN_EMAILS } from "@/constants";
 import { AdminSidebar } from "@/components/shared/AdminSidebar";
+import { hasDistinctStagingDb } from "@/lib/db";
 
 /**
  * Admin section layout.
@@ -24,6 +25,8 @@ export default async function AdminLayout({
     redirect("/unauthorized");
   }
 
+  const hasStagingDb = hasDistinctStagingDb();
+
   return (
     <div className="flex h-screen overflow-hidden bg-[#FAFAFA]">
       {/* Sidebar */}
@@ -31,6 +34,7 @@ export default async function AdminLayout({
         adminName={session.user.name}
         adminEmail={session.user.email}
         adminImage={session.user.image}
+        hasStagingDb={hasStagingDb}
       />
 
       {/* Main content area */}
