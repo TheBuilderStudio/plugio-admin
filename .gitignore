@@ -14,7 +14,7 @@ build/
 .env.production
 
 # Logs
-logs/
+/logs/
 *.log
 
 # OS
