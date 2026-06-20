@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -60,12 +61,34 @@ interface AdminSidebarProps {
   adminImage: string | null | undefined;
 }
 
+function getCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop()?.split(";").shift();
+  return undefined;
+}
+
 export function AdminSidebar({
   adminName,
   adminEmail,
   adminImage,
 }: AdminSidebarProps) {
   const pathname = usePathname();
+  const [dbContext, setDbContext] = useState<"production" | "staging">("production");
+
+  useEffect(() => {
+    const current = getCookie("plugio_db_context") || (ENVIRONMENT === "staging" ? "staging" : "production");
+    if (current === "production" || current === "staging") {
+      setDbContext(current as "production" | "staging");
+    }
+  }, []);
+
+  const handleDbContextChange = (newContext: "production" | "staging") => {
+    document.cookie = `plugio_db_context=${newContext}; path=/; max-age=31536000; sameSite=lax`;
+    setDbContext(newContext);
+    window.location.reload();
+  };
 
   return (
     <aside
@@ -88,6 +111,28 @@ export function AdminSidebar({
           <p className="text-[#FF6719] text-[10px] font-bold tracking-widest uppercase mt-0.5">
             Admin
           </p>
+        </div>
+      </div>
+
+      {/* Database Context Switcher */}
+      <div className="px-6 py-4 border-b border-white/5 bg-[#141312]/60">
+        <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2">
+          Database Connection
+        </label>
+        <div className="relative">
+          <select
+            value={dbContext}
+            onChange={(e) => handleDbContextChange(e.target.value as "production" | "staging")}
+            className="w-full bg-[#0D0C0B] border border-white/10 hover:border-white/20 rounded-lg px-3 py-2 text-xs font-semibold text-neutral-300 focus:outline-none focus:border-[#FF6719] cursor-pointer appearance-none transition-colors"
+          >
+            <option value="production">Production DB</option>
+            <option value="staging">Staging DB</option>
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-neutral-500">
+            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+            </svg>
+          </div>
         </div>
       </div>
 
