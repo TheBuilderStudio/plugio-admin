@@ -29,11 +29,11 @@ export default function AdminError({
           be a database connection issue or a temporary timeout.
         </p>
         
-        {process.env.NODE_ENV !== "production" && (
-          <div className="bg-zinc-50 p-3 rounded-lg text-left overflow-auto mb-6 text-xs font-mono text-zinc-700 border border-zinc-200">
-            {error.message}
-          </div>
-        )}
+        <div className="bg-zinc-50 p-3 rounded-lg text-left overflow-auto mb-6 text-xs font-mono text-zinc-700 border border-zinc-200">
+          <p className="font-bold text-red-600 mb-1">Error Details:</p>
+          <p>{error.message || "Unknown error occurred"}</p>
+          {error.digest && <p className="mt-1 text-[10px] text-zinc-400 font-mono">Digest: {error.digest}</p>}
+        </div>
 
         <button
           onClick={() => reset()}
