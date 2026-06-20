@@ -46,6 +46,7 @@ RUN mkdir -p .next && chown nextjs:nodejs .next
 
 # Copy the standalone server bundle and static assets.
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static    ./.next/static
 
 # Drop privileges before the process starts.

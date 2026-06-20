@@ -4,11 +4,6 @@ const nextConfig: NextConfig = {
   // Output standalone for Docker/VPS deployment
   output: "standalone",
 
-  // Force mysql2 to be included in standalone node_modules trace
-  outputFileTracingIncludes: {
-    "/**/*": ["./node_modules/mysql2/**/*"],
-  },
-
   images: {
     remotePatterns: [
       {
