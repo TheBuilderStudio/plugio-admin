@@ -3,7 +3,7 @@ name: Deploy Admin — Staging
 on:
   push:
     branches:
-      - develop
+      - dev
   workflow_dispatch:
 
 concurrency:
@@ -46,9 +46,9 @@ jobs:
         run: |
           set -euo pipefail
           cd ~/plugio/plugio-admin
-          git fetch origin develop
-          git checkout develop
-          git reset --hard origin/develop
+          git fetch origin dev
+          git checkout dev
+          git reset --hard origin/dev
           cd ~/plugio/plugio-backend
           git fetch origin develop
           git checkout develop

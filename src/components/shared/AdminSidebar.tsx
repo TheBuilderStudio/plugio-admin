@@ -10,6 +10,7 @@ import {
   LogOut,
   Shield,
   Receipt,
+  Terminal,
 } from "lucide-react";
 import { logoutAction } from "@/actions/user.actions";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,11 @@ const navItems = [
     label: "Payments",
     href: "/admin/payments",
     icon: Receipt,
+  },
+  {
+    label: "Server Logs",
+    href: "/admin/logs",
+    icon: Terminal,
   },
   {
     label: "Audit Log",
