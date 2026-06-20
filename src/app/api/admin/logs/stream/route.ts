@@ -2,7 +2,7 @@ import { requireAdmin } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     // 1. Authenticate that the user is an authorized admin
     await requireAdmin();
@@ -16,6 +16,7 @@ export async function GET() {
         "X-Admin-Api-Key": apiKey,
       },
       cache: "no-store",
+      signal: request.signal,
     });
 
     if (!response.ok) {
