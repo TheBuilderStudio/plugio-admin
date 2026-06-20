@@ -43,7 +43,9 @@ export default function LogsPage() {
     }
 
     setConnectionStatus("connecting");
-    const eventSource = new EventSource("/api/admin/logs/stream");
+    const eventSource = new EventSource("/api/admin/logs/stream", {
+      withCredentials: true,
+    });
     eventSourceRef.current = eventSource;
 
     eventSource.onopen = () => {
