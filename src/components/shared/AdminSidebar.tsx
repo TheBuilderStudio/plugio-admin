@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { logoutAction } from "@/actions/user.actions";
 import { cn } from "@/lib/utils";
+import { ENVIRONMENT } from "@/constants";
 
 const navItems = [
   {
@@ -76,7 +77,14 @@ export function AdminSidebar({
           <span className="text-white font-black text-sm leading-none">P</span>
         </div>
         <div>
-          <p className="text-white font-bold text-base leading-none">Plugio</p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-white font-bold text-base leading-none">Plugio</p>
+            {ENVIRONMENT !== "production" && (
+              <span className="bg-amber-500/10 text-amber-500 text-[9px] font-black uppercase px-1.5 py-0.5 rounded border border-amber-500/20 tracking-wider">
+                {ENVIRONMENT === "development" ? "Dev" : "Staging"}
+              </span>
+            )}
+          </div>
           <p className="text-[#FF6719] text-[10px] font-bold tracking-widest uppercase mt-0.5">
             Admin
           </p>
