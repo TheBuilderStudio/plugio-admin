@@ -66,9 +66,9 @@ export const stagingPool = mysql.createPool(stagingConfig);
 /**
  * Gets the current active database context from cookies or defaults to environment setting.
  */
-export function getActiveDbContext(): "production" | "staging" {
+export async function getActiveDbContext(): Promise<"production" | "staging"> {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const context = cookieStore.get("plugio_db_context")?.value;
     if (context === "production" || context === "staging") {
       return context;
@@ -93,8 +93,8 @@ export function hasDistinctStagingDb(): boolean {
 /**
  * Returns the pool matching the current active database context.
  */
-export function getActivePool(): mysql.Pool {
-  const context = getActiveDbContext();
+export async function getActivePool(): Promise<mysql.Pool> {
+  const context = await getActiveDbContext();
   return context === "staging" ? stagingPool : prodPool;
 }
 
@@ -104,12 +104,14 @@ export function getActivePool(): mysql.Pool {
  */
 export const pool = new Proxy({} as mysql.Pool, {
   get(target, prop, receiver) {
-    const activePool = getActivePool();
-    const value = Reflect.get(activePool, prop, receiver);
-    if (typeof value === "function") {
-      return value.bind(activePool);
-    }
-    return value;
+    return async (...args: any[]) => {
+      const activePool = await getActivePool();
+      const fn = Reflect.get(activePool, prop, receiver);
+      if (typeof fn === "function") {
+        return fn.apply(activePool, args);
+      }
+      return fn;
+    };
   },
 });
 
@@ -119,7 +121,7 @@ export const pool = new Proxy({} as mysql.Pool, {
  */
 export async function testConnection(): Promise<boolean> {
   try {
-    const activePool = getActivePool();
+    const activePool = await getActivePool();
     const connection = await activePool.getConnection();
     await connection.ping();
     connection.release();

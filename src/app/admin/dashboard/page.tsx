@@ -23,7 +23,7 @@ export const revalidate = 60;
 export default async function DashboardPage() {
   const admin = await requireAdmin();
 
-  const dbContext = getActiveDbContext();
+  const dbContext = await getActiveDbContext();
   const [stats, activity] = await Promise.all([
     getDashboardStats(dbContext),
     getRecentActivity(8, dbContext),
