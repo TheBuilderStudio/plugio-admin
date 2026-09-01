@@ -44,8 +44,8 @@ RUN apk add --no-cache curl
 RUN addgroup --system --gid 1001 nodejs \
  && adduser  --system --uid 1001 nextjs
 
-# Pre-create the .next directory with correct ownership.
-RUN mkdir -p .next && chown nextjs:nodejs .next
+# Pre-create the .next and logs directories with correct ownership.
+RUN mkdir -p .next logs && chown -R nextjs:nodejs .next logs
 
 # Copy the standalone server bundle and static assets.
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
