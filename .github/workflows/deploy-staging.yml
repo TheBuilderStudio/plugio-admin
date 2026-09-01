@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - dev
+      - develop
   workflow_dispatch:
 
 concurrency:
@@ -21,36 +22,28 @@ jobs:
     name: Deploy to Staging VPS
     runs-on: [self-hosted, plugio-vps]
     needs: ci
-    environment: staging
     timeout-minutes: 45
     if: github.repository == 'TheBuilderStudio/plugio-admin'
 
     steps:
       - name: Configure git safe directories
         run: |
-          git config --global --add safe.directory "$HOME/plugio/plugio-backend"
-          git config --global --add safe.directory "$HOME/plugio/plugio-admin"
-
-      - name: Check staging is configured on VPS
-        id: staging
-        run: |
-          if [[ -f "$HOME/plugio/plugio-backend/.env.staging" ]]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Staging deploy skipped — create .env.staging on the VPS (see plugio-backend/.env.staging.example)."
-          fi
+          git config --global --add safe.directory "$HOME/plugio/stage/plugio-admin" || true
 
       - name: Sync and deploy staging admin
-        if: steps.staging.outputs.ready == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          cd ~/plugio/plugio-admin
-          git fetch origin dev
-          git checkout dev
-          git reset --hard origin/dev
-          cd ~/plugio/plugio-backend
-          git fetch origin develop
-          git checkout develop
-          git reset --hard origin/develop
-          sg docker -c 'bash deploy/vps-deploy-staging.sh admin'
+          ADMIN_DIR="$HOME/plugio/stage/plugio-admin"
+          if [[ ! -d "$ADMIN_DIR" ]]; then
+            mkdir -p "$HOME/plugio/stage"
+            git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$ADMIN_DIR"
+          fi
+          cd "$ADMIN_DIR"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch origin "${GITHUB_REF_NAME}"
+          git reset --hard "origin/${GITHUB_REF_NAME}"
+          git checkout "${GITHUB_REF_NAME}"
+          docker build -t plugio-admin:latest -f deployment/Dockerfile .
+          docker restart plugio-admin-staging

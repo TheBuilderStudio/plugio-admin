@@ -21,33 +21,28 @@ jobs:
     name: Deploy to Production VPS
     runs-on: [self-hosted, plugio-vps]
     needs: ci
-    environment: production
     timeout-minutes: 45
     if: github.repository == 'TheBuilderStudio/plugio-admin'
 
     steps:
       - name: Configure git safe directories
         run: |
-          git config --global --add safe.directory "$HOME/plugio/plugio-backend"
-          git config --global --add safe.directory "$HOME/plugio/plugio-admin"
+          git config --global --add safe.directory "$HOME/plugio/prod/plugio-admin" || true
 
       - name: Sync and deploy admin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          cd ~/plugio/plugio-admin
+          ADMIN_DIR="$HOME/plugio/prod/plugio-admin"
+          if [[ ! -d "$ADMIN_DIR" ]]; then
+            mkdir -p "$HOME/plugio/prod"
+            git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$ADMIN_DIR"
+          fi
+          cd "$ADMIN_DIR"
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git fetch origin main
-          git reset --hard
-          git clean -fd
-          git checkout main
           git reset --hard origin/main
-          cd ~/plugio/plugio-backend
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/TheBuilderStudio/plugio-backend.git"
-          git fetch origin main
-          git reset --hard
-          git clean -fd
           git checkout main
-          git reset --hard origin/main
-          sg docker -c 'bash deploy/vps-deploy.sh admin'
+          docker build -t plugio-admin:latest -f deployment/Dockerfile .
+          docker restart plugio-admin
