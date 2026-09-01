@@ -32,13 +32,17 @@ jobs:
           git config --global --add safe.directory "$HOME/plugio/plugio-admin"
 
       - name: Sync and deploy admin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           cd ~/plugio/plugio-admin
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git fetch origin main
           git checkout main
           git reset --hard origin/main
           cd ~/plugio/plugio-backend
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/TheBuilderStudio/plugio-backend.git"
           git fetch origin main
           git checkout main
           git reset --hard origin/main
