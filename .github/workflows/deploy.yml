@@ -39,11 +39,15 @@ jobs:
           cd ~/plugio/plugio-admin
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git fetch origin main
+          git reset --hard
+          git clean -fd
           git checkout main
           git reset --hard origin/main
           cd ~/plugio/plugio-backend
           git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/TheBuilderStudio/plugio-backend.git"
           git fetch origin main
+          git reset --hard
+          git clean -fd
           git checkout main
           git reset --hard origin/main
           sg docker -c 'bash deploy/vps-deploy.sh admin'
