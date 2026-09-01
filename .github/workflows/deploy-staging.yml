@@ -45,5 +45,13 @@ jobs:
           git fetch origin "${GITHUB_REF_NAME}"
           git reset --hard "origin/${GITHUB_REF_NAME}"
           git checkout "${GITHUB_REF_NAME}"
-          docker build -t plugio-admin:latest -f deployment/Dockerfile .
-          docker restart plugio-admin-staging
+          docker build -t plugio-admin-staging:latest -f deployment/Dockerfile .
+          docker stop plugio-admin-staging 2>/dev/null || true
+          docker rm plugio-admin-staging 2>/dev/null || true
+          docker run -d \
+            --name plugio-admin-staging \
+            --restart unless-stopped \
+            --network plugio-network \
+            -p 127.0.0.1:9011:3000 \
+            --env-file .env.local \
+            plugio-admin-staging:latest

@@ -45,4 +45,12 @@ jobs:
           git reset --hard origin/main
           git checkout main
           docker build -t plugio-admin:latest -f deployment/Dockerfile .
-          docker restart plugio-admin
+          docker stop plugio-admin 2>/dev/null || true
+          docker rm plugio-admin 2>/dev/null || true
+          docker run -d \
+            --name plugio-admin \
+            --restart unless-stopped \
+            --network plugio-network \
+            -p 127.0.0.1:9001:3000 \
+            --env-file .env.local \
+            plugio-admin:latest
