@@ -6,7 +6,7 @@
  * Server Actions for approving and rejecting beta access requests.
  *
  * Security contract:
- * 1. requireAdmin() validates session and email whitelist on EVERY action
+ * 1. requireWritableAdmin() validates session, whitelist, and read-only mode
  * 2. validateUserId() ensures the userId from the form is a valid UUID
  * 3. All DB operations use parameterized queries (no SQL injection possible)
  * 4. Every action is logged via logAdminAction()
@@ -14,13 +14,14 @@
  */
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/security";
+import { requireWritableAdmin } from "@/lib/security";
 import { validateUserId } from "@/lib/validation";
 import {
   approveBetaUser,
   rejectBetaUser,
   getUserEmailById,
 } from "@/lib/db/queries";
+import { invalidateAdminOverview } from "@/lib/db/admin-overview";
 import { logAdminAction } from "@/lib/logger";
 import type { ActionResult } from "@/types";
 
@@ -38,8 +39,8 @@ export async function approveBetaAction(
   userId: string
 ): Promise<ActionResult> {
   try {
-    // 1. Validate admin session (throws if unauthorized)
-    const session = await requireAdmin();
+    // 1. Validate admin session + writable mode
+    const session = await requireWritableAdmin();
 
     // 2. Validate input
     const validUserId = validateUserId(userId);
@@ -66,6 +67,7 @@ export async function approveBetaAction(
     revalidatePath("/admin/beta");
     revalidatePath(`/admin/users/${validUserId}`);
     revalidatePath("/admin/dashboard");
+    invalidateAdminOverview();
 
     return {
       success: true,
@@ -100,8 +102,8 @@ export async function approveBetaAction(
  */
 export async function rejectBetaAction(userId: string): Promise<ActionResult> {
   try {
-    // 1. Validate admin session
-    const session = await requireAdmin();
+    // 1. Validate admin session + writable mode
+    const session = await requireWritableAdmin();
 
     // 2. Validate input
     const validUserId = validateUserId(userId);
@@ -128,6 +130,7 @@ export async function rejectBetaAction(userId: string): Promise<ActionResult> {
     revalidatePath("/admin/beta");
     revalidatePath(`/admin/users/${validUserId}`);
     revalidatePath("/admin/dashboard");
+    invalidateAdminOverview();
 
     return {
       success: true,

@@ -1,46 +1,67 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { ADMIN_EMAILS } from "@/constants";
+import { isAdminEmail } from "@/lib/security";
 import { AdminSidebar } from "@/components/shared/AdminSidebar";
-import { hasDistinctStagingDb } from "@/lib/db";
+import { AdminTopBar } from "@/components/shared/AdminTopBar";
+import { AdminReadOnlyProvider } from "@/components/shared/AdminReadOnlyContext";
+import { getActiveDbContext, hasDistinctStagingDb } from "@/lib/db";
+import { getPendingBetaCount } from "@/lib/db/queries";
 
 /**
- * Admin section layout.
- * Wraps all /admin/* pages with the sidebar.
- * Re-validates admin access on every render (defense in depth after middleware).
+ * Admin section layout — Plugio dashboard shell:
+ * dark sidebar + frosted top bar + soft gray canvas with brand glow.
  */
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Server-side session validation — cannot be bypassed
   const session = await auth();
 
   if (!session?.user?.email) {
     redirect("/login");
   }
 
-  if (!ADMIN_EMAILS.includes(session.user.email)) {
+  if (!isAdminEmail(session.user.email)) {
     redirect("/unauthorized");
   }
 
   const hasStagingDb = hasDistinctStagingDb();
+  const isReadOnly =
+    process.env.READ_ONLY_MODE === "true" ||
+    process.env.NEXT_PUBLIC_READ_ONLY_MODE === "true";
+
+  let pendingBeta = 0;
+  try {
+    const dbContext = await getActiveDbContext();
+    pendingBeta = await getPendingBetaCount(dbContext);
+  } catch {
+    pendingBeta = 0;
+  }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#FAFAFA]">
-      {/* Sidebar */}
-      <AdminSidebar
-        adminName={session.user.name}
-        adminEmail={session.user.email}
-        adminImage={session.user.image}
-        hasStagingDb={hasStagingDb}
-      />
+    <AdminReadOnlyProvider isReadOnly={isReadOnly}>
+      <div className="relative flex h-dvh isolate overflow-hidden bg-[#F8F9FB]">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-[20vw] -top-[20vh] -z-10 h-[60vh] w-[60vw] rounded-full bg-gradient-to-b from-orange-500/10 to-transparent blur-[100px]"
+        />
 
-      {/* Main content area */}
-      <main className="flex-1 overflow-y-auto min-w-0">
-        <div className="min-h-full animate-fade-in">{children}</div>
-      </main>
-    </div>
+        <AdminSidebar
+          adminName={session.user.name}
+          adminEmail={session.user.email}
+          adminImage={session.user.image}
+          hasStagingDb={hasStagingDb}
+          isReadOnly={isReadOnly}
+        />
+
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <AdminTopBar isReadOnly={isReadOnly} pendingBeta={pendingBeta} />
+          <main className="custom-scrollbar min-w-0 flex-1 overflow-y-auto">
+            <div className="min-h-full animate-fade-in">{children}</div>
+          </main>
+        </div>
+      </div>
+    </AdminReadOnlyProvider>
   );
 }

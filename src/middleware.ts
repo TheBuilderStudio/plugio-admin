@@ -14,11 +14,12 @@
 
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
-import { ADMIN_EMAILS } from "@/constants";
+import { isAdminEmail } from "@/lib/security/emails";
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
+  const email = session?.user?.email;
 
   // Allow Next.js internals and static files
   if (
@@ -36,33 +37,42 @@ export default auth((req) => {
 
   // Root → redirect to dashboard (if admin) or login
   if (pathname === "/") {
-    if (session?.user?.email && ADMIN_EMAILS.includes(session.user.email)) {
+    if (isAdminEmail(email)) {
       return NextResponse.redirect(new URL("/admin/dashboard", req.url));
     }
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // Admin routes require authentication + whitelist
-  if (pathname.startsWith("/admin")) {
-    if (!session?.user?.email) {
-      // Not authenticated → login
+  // Protect admin UI and admin APIs (except NextAuth)
+  if (pathname.startsWith("/admin") || pathname.startsWith("/api/")) {
+    if (pathname.startsWith("/api/auth")) {
+      return NextResponse.next();
+    }
+
+    if (!email) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
       const loginUrl = new URL("/login", req.url);
-      loginUrl.searchParams.set("callbackUrl", pathname);
+      // Preserve query string for deep links (e.g. /admin/beta?status=PENDING)
+      const returnTo = `${pathname}${req.nextUrl.search}`;
+      loginUrl.searchParams.set("callbackUrl", returnTo);
       return NextResponse.redirect(loginUrl);
     }
 
-    if (!ADMIN_EMAILS.includes(session.user.email)) {
-      // Authenticated but not an admin → unauthorized
+    if (!isAdminEmail(email)) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
       return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
 
-    // Valid admin — allow through
     return NextResponse.next();
   }
 
   // Login page — redirect authenticated admins to dashboard
   if (pathname === "/login") {
-    if (session?.user?.email && ADMIN_EMAILS.includes(session.user.email)) {
+    if (isAdminEmail(email)) {
       return NextResponse.redirect(new URL("/admin/dashboard", req.url));
     }
     return NextResponse.next();

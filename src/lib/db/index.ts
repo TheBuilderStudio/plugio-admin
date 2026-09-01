@@ -27,11 +27,11 @@ if (!isBuildPhase) {
 
 // 1. Production Config (Fall back to default DB_* values if PROD_DB_* is not set)
 const prodConfig = {
-  host: process.env.PROD_DB_HOST || process.env.DB_HOST || "localhost",
+  host: process.env.PROD_DB_HOST || process.env.DB_HOST || "127.0.0.1",
   port: parseInt(process.env.PROD_DB_PORT || process.env.DB_PORT || "3306", 10),
-  database: process.env.PROD_DB_NAME || process.env.DB_NAME || "temp_db",
-  user: process.env.PROD_DB_USERNAME || process.env.DB_USERNAME || "temp_user",
-  password: process.env.PROD_DB_PASSWORD || process.env.DB_PASSWORD || "temp_password",
+  database: process.env.PROD_DB_NAME || process.env.DB_NAME || "plugio_db",
+  user: process.env.PROD_DB_USERNAME || process.env.DB_USERNAME || "root",
+  password: process.env.PROD_DB_PASSWORD || process.env.DB_PASSWORD || "",
   ssl: (process.env.PROD_DB_SSL || process.env.DB_SSL) === "true" ? { rejectUnauthorized: false } : undefined,
   waitForConnections: true,
   connectionLimit: 10,
@@ -44,11 +44,11 @@ const prodConfig = {
 
 // 2. Staging Config (Fall back to default DB_* values if STAGING_DB_* is not set)
 const stagingConfig = {
-  host: process.env.STAGING_DB_HOST || process.env.DB_HOST || "localhost",
+  host: process.env.STAGING_DB_HOST || process.env.DB_HOST || "127.0.0.1",
   port: parseInt(process.env.STAGING_DB_PORT || process.env.DB_PORT || "3306", 10),
-  database: process.env.STAGING_DB_NAME || process.env.DB_NAME || "temp_db",
-  user: process.env.STAGING_DB_USERNAME || process.env.DB_USERNAME || "temp_user",
-  password: process.env.STAGING_DB_PASSWORD || process.env.DB_PASSWORD || "temp_password",
+  database: process.env.STAGING_DB_NAME || process.env.DB_NAME || "plugio_db",
+  user: process.env.STAGING_DB_USERNAME || process.env.DB_USERNAME || "root",
+  password: process.env.STAGING_DB_PASSWORD || process.env.DB_PASSWORD || "",
   ssl: (process.env.STAGING_DB_SSL || process.env.DB_SSL) === "true" ? { rejectUnauthorized: false } : undefined,
   waitForConnections: true,
   connectionLimit: 10,
@@ -91,11 +91,21 @@ export function hasDistinctStagingDb(): boolean {
 }
 
 /**
+ * Returns the pool for an explicit DB context.
+ * Use this inside unstable_cache — never call cookies() from cached loaders.
+ */
+export function getPoolForContext(
+  context: "production" | "staging"
+): mysql.Pool {
+  return context === "staging" ? stagingPool : prodPool;
+}
+
+/**
  * Returns the pool matching the current active database context.
  */
 export async function getActivePool(): Promise<mysql.Pool> {
   const context = await getActiveDbContext();
-  return context === "staging" ? stagingPool : prodPool;
+  return getPoolForContext(context);
 }
 
 /**

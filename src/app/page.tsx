@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { ADMIN_EMAILS } from "@/constants";
+import { isAdminEmail } from "@/lib/security";
 
 /**
  * Root page — redirects to dashboard (if admin) or login.
@@ -9,7 +9,7 @@ import { ADMIN_EMAILS } from "@/constants";
 export default async function RootPage() {
   const session = await auth();
 
-  if (session?.user?.email && ADMIN_EMAILS.includes(session.user.email)) {
+  if (isAdminEmail(session?.user?.email)) {
     redirect("/admin/dashboard");
   }
 

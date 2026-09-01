@@ -5,6 +5,15 @@ export const metadata: Metadata = {
   title: "Sign In — Plugio Admin",
 };
 
+/** Only allow relative admin paths — blocks open redirects. */
+function safeAdminCallbackUrl(raw: string | undefined): string {
+  if (!raw) return "/admin/dashboard";
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/admin/dashboard";
+  if (!raw.startsWith("/admin")) return "/admin/dashboard";
+  if (raw.includes("\\") || raw.includes("@")) return "/admin/dashboard";
+  return raw;
+}
+
 interface LoginPageProps {
   searchParams: Promise<{ error?: string; callbackUrl?: string }>;
 }
@@ -12,7 +21,7 @@ interface LoginPageProps {
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const error = params.error;
-  const callbackUrl = params.callbackUrl ?? "/admin/dashboard";
+  const callbackUrl = safeAdminCallbackUrl(params.callbackUrl);
 
   const isUnauthorized = error === "AccessDenied" || error === "unauthorized";
 

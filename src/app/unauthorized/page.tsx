@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { Metadata } from "next";
+import { signOut } from "@/auth";
 
 export const metadata: Metadata = {
   title: "Unauthorized — Plugio Admin",
@@ -29,12 +29,19 @@ export default function UnauthorizedPage() {
           Your Google account is not authorized to access the Plugio Admin
           panel.
         </p>
-        <Link
-          href="/login"
-          className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors"
+        <form
+          action={async () => {
+            "use server";
+            await signOut({ redirectTo: "/login" });
+          }}
         >
-          Try a different account
-        </Link>
+          <button
+            type="submit"
+            className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors"
+          >
+            Sign out and try another account
+          </button>
+        </form>
       </div>
     </div>
   );

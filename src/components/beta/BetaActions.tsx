@@ -4,8 +4,7 @@ import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { approveBetaAction, rejectBetaAction } from "@/actions/beta.actions";
-
-const IS_READ_ONLY = process.env.NEXT_PUBLIC_READ_ONLY_MODE === "true";
+import { useAdminReadOnly } from "@/components/shared/AdminReadOnlyContext";
 
 interface BetaActionsProps {
   userId: string;
@@ -13,6 +12,7 @@ interface BetaActionsProps {
 }
 
 export function BetaActions({ userId, currentStatus }: BetaActionsProps) {
+  const isReadOnly = useAdminReadOnly();
   const router = useRouter();
   const [isPendingApprove, startApprove] = useTransition();
   const [isPendingReject, startReject] = useTransition();
@@ -65,7 +65,7 @@ export function BetaActions({ userId, currentStatus }: BetaActionsProps) {
     );
   }
 
-  if (IS_READ_ONLY) {
+  if (isReadOnly) {
     return (
       <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-center">
         <p className="text-xs text-blue-600 font-medium">

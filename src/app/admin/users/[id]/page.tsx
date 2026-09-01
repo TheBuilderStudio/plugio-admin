@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { requireAdmin } from "@/lib/security";
 import { validateUserId } from "@/lib/validation";
-import { getUserDetail, getPaymentAuditEventsForUser } from "@/lib/db/queries";
+import { getUserDetail, getPaymentAuditEventsForUser, listGrantsForUser } from "@/lib/db/queries";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { BetaActions } from "@/components/beta/BetaActions";
 import { BillingActions } from "@/components/billing/BillingActions";
@@ -54,7 +54,10 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const user = await getUserDetail(userId);
   if (!user) notFound();
 
-  const paymentEvents = await getPaymentAuditEventsForUser(userId);
+  const [paymentEvents, grantHistory] = await Promise.all([
+    getPaymentAuditEventsForUser(userId),
+    listGrantsForUser(userId),
+  ]);
 
   const hasBetaApplication = !!user.beta_application_submitted_at;
   const isPending =
@@ -226,6 +229,20 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
                 <StatusBadge status={user.subscription_status ?? "NONE"} />
               }
             />
+            <InfoRow
+              label="Plan"
+              value={user.plan_id ?? "—"}
+            />
+            <InfoRow
+              label="Has used trial"
+              value={
+                user.has_used_trial === null
+                  ? "—"
+                  : user.has_used_trial
+                    ? "Yes"
+                    : "No"
+              }
+            />
             {user.billing_interval && (
               <InfoRow label="Billing" value={user.billing_interval} />
             )}
@@ -243,13 +260,34 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
             )}
             {user.pro_period_end_at && (
               <InfoRow
-                label="Pro Ends (Lifetime)"
+                label="Pro ends"
                 value={formatDate(user.pro_period_end_at)}
               />
             )}
+            {user.payment_last4 && (
+              <InfoRow label="Card" value={`•••• ${user.payment_last4}`} />
+            )}
+            {user.active_grant && (
+              <>
+                <InfoRow
+                  label="Active grant"
+                  value={`${user.active_grant.plan_id} (until ${formatDate(user.active_grant.ends_at)})`}
+                />
+                {user.active_grant.previous_effective_plan && (
+                  <InfoRow
+                    label="Prev. plan"
+                    value={user.active_grant.previous_effective_plan}
+                  />
+                )}
+              </>
+            )}
           </div>
           
-          <BillingActions userId={user.id} />
+          <BillingActions
+            userId={user.id}
+            activeGrant={user.active_grant}
+            grantHistory={grantHistory}
+          />
 
           {/* Payment History */}
           {paymentEvents.length > 0 && (

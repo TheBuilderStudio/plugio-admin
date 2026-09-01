@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Users, Search, ExternalLink, TrendingUp, Download } from "lucide-react";
 import { requireAdmin } from "@/lib/security";
 import { getUsers, getDashboardStats } from "@/lib/db/queries";
+import { getActiveDbContext } from "@/lib/db";
 import { validateSearch, validatePage } from "@/lib/validation";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Pagination } from "@/components/shared/Pagination";
@@ -24,13 +25,14 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
   const page = validatePage(params.page);
   
   const filterRaw = params.filter ?? "ALL";
-  const filter = ["ALL", "SUBSCRIBED", "FREE"].includes(filterRaw)
-    ? (filterRaw as "ALL" | "SUBSCRIBED" | "FREE")
+  const filter = ["ALL", "SUBSCRIBED", "FREE", "PAID", "TRIALING"].includes(filterRaw)
+    ? (filterRaw as "ALL" | "SUBSCRIBED" | "FREE" | "PAID" | "TRIALING")
     : "ALL";
 
+  const dbContext = await getActiveDbContext();
   const [result, stats] = await Promise.all([
     getUsers(search, filter, page, 20),
-    getDashboardStats()
+    getDashboardStats(dbContext)
   ]);
 
   return (
@@ -68,6 +70,8 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
             <div className="flex items-center gap-2 mt-6 p-1 bg-neutral-100/80 rounded-xl w-fit">
               {[
                 { value: "ALL", label: "All Users" },
+                { value: "PAID", label: "Paid" },
+                { value: "TRIALING", label: "Trialing" },
                 { value: "SUBSCRIBED", label: "Subscribers" },
                 { value: "FREE", label: "Free Users" },
               ].map((tab) => (

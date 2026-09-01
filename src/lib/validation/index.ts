@@ -89,3 +89,48 @@ export function validatePage(page: unknown): number {
   if (parsed > 10000) return 1; // sanity ceiling
   return parsed;
 }
+
+const COUPON_CODE_REGEX = /^[A-Z0-9][A-Z0-9_-]{0,63}$/;
+
+/**
+ * Normalize and validate a trial coupon code.
+ * Codes are stored UPPERCASE and must match /^[A-Z0-9][A-Z0-9_-]{0,63}$/.
+ */
+export function validateCouponCode(code: unknown): string {
+  if (typeof code !== "string" || !code.trim()) {
+    throw new ValidationError("Coupon code is required");
+  }
+
+  const normalized = code.trim().toUpperCase();
+
+  if (!COUPON_CODE_REGEX.test(normalized)) {
+    throw new ValidationError(
+      "Invalid coupon code. Use 1–64 chars: A–Z, 0–9, underscore, or hyphen (must start with alphanumeric)."
+    );
+  }
+
+  return normalized;
+}
+
+/**
+ * Validate complimentary grant plan (CREATOR | PRO only).
+ */
+export function validateGrantPlan(planId: unknown): "CREATOR" | "PRO" {
+  if (planId === "CREATOR" || planId === "PRO") {
+    return planId;
+  }
+  throw new ValidationError("Plan must be CREATOR or PRO");
+}
+
+/**
+ * Validate complimentary grant duration (30 | 60 | 90 days).
+ */
+export function validateGrantDuration(days: unknown): 30 | 60 | 90 {
+  if (typeof days === "number") {
+    if (days === 30 || days === 60 || days === 90) return days;
+  }
+  if (typeof days === "string" && /^(30|60|90)$/.test(days.trim())) {
+    return Number(days.trim()) as 30 | 60 | 90;
+  }
+  throw new ValidationError("Duration must be 30, 60, or 90 days");
+}

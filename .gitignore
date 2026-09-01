@@ -29,3 +29,16 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Documentation, Notes & Media — local only (never push to GitHub)
+docs/
+doc/
+*.doc
+*.docx
+*.pdf
+CODING_CONTEXT.md
+*.notes.md
+ARCHITECTURE_*.md
+!README.md
+!SECURITY.md
+

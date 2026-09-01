@@ -2,43 +2,50 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Google Fonts ─────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-/* ── Base ─────────────────────────────────────────────── */
+/* ── Base — aligned with plugio-frontend dashboard shell ── */
 *, *::before, *::after {
   box-sizing: border-box;
 }
 
 html, body {
   height: 100%;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: "Google Sans Flex", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #FAFAFA;
+  background-color: #F8F9FB;
   color: #09090B;
 }
 
-/* ── Admin layout variables ───────────────────────────── */
+/* ── Plugio design tokens (mirror frontend globals) ─────── */
 :root {
-  --sidebar-width: 256px;
-  --content-bg: #FAFAFA;
+  --sidebar-width: 240px;
+  --content-bg: #F8F9FB;
   --card-bg: #FFFFFF;
-  --border: #E4E4E7;
+  --border: rgba(228, 228, 231, 0.8);
 
   --text-primary: #09090B;
   --text-secondary: #52525B;
   --text-muted: #A1A1AA;
 
+  /* Marketing brand orange */
   --brand: #FF6719;
   --brand-dark: #EA580C;
+  /* Token / primary (frontend --brand-primary) */
+  --brand-token: #f97316;
+  --brand-muted: rgba(249, 115, 22, 0.1);
+  --gradient-primary: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  --gradient-cta: linear-gradient(180deg, #ff7a33 0%, #ff6719 100%);
+  --canvas-dark: #0D0C0B;
 
   --success: #10B981;
   --warning: #F59E0B;
   --danger: #EF4444;
+
+  --radius-card: 1rem; /* rounded-2xl */
 }
 
-/* ── Scrollbar styling ────────────────────────────────── */
+/* ── Scrollbar ────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -54,7 +61,6 @@ html, body {
   background: #D4D4D8;
 }
 
-/* ── Utility classes ──────────────────────────────────── */
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -63,11 +69,27 @@ html, body {
   .animate-fade-in {
     animation: fadeIn 0.2s ease-in-out;
   }
+
+  .admin-card {
+    @apply rounded-2xl border border-neutral-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)];
+  }
+
+  .admin-eyebrow {
+    @apply text-[10px] font-bold uppercase tracking-[0.14em] text-[#FF6719];
+  }
 }
 
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #E4E4E7;
+  border-radius: 999px;
 }
 
 /* ── Status badge system ──────────────────────────────── */
@@ -98,7 +120,7 @@ html, body {
   border-collapse: collapse;
 }
 .admin-table th {
-  background: #FAFAFA;
+  background: #F8F9FB;
   padding: 10px 16px;
   text-align: left;
   font-size: 11px;
@@ -117,7 +139,7 @@ html, body {
   vertical-align: middle;
 }
 .admin-table tbody tr:hover {
-  background-color: #FAFAFA;
+  background-color: #F8F9FB;
 }
 .admin-table tbody tr:last-child td {
   border-bottom: none;

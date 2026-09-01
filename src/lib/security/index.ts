@@ -14,6 +14,9 @@
 import { auth } from "@/auth";
 import { ADMIN_EMAILS } from "@/constants";
 import type { Session } from "next-auth";
+import { normalizeAdminEmail } from "@/lib/security/emails";
+
+export { isAdminEmail, normalizeAdminEmail } from "@/lib/security/emails";
 
 /**
  * Validates that the current session belongs to an authorized admin.
@@ -25,17 +28,38 @@ import type { Session } from "next-auth";
  */
 export async function requireAdmin(): Promise<Session> {
   const session = await auth();
+  const email = normalizeAdminEmail(session?.user?.email);
 
-  if (!session?.user?.email) {
+  if (!email) {
     throw new Error("UNAUTHORIZED: No active session");
   }
 
-  if (!ADMIN_EMAILS.includes(session.user.email)) {
-    throw new Error(
-      `FORBIDDEN: ${session.user.email} is not an authorized admin`
-    );
+  if (!ADMIN_EMAILS.includes(email)) {
+    throw new Error(`FORBIDDEN: ${email} is not an authorized admin`);
   }
 
+  return session!;
+}
+
+/**
+ * Server-side read-only gate. UI flags alone are not enough — every mutating
+ * server action must call this after requireAdmin().
+ */
+export function assertAdminWritable(): void {
+  const readOnly =
+    process.env.READ_ONLY_MODE === "true" ||
+    process.env.NEXT_PUBLIC_READ_ONLY_MODE === "true";
+  if (readOnly) {
+    throw new Error("FORBIDDEN: Admin panel is in read-only mode");
+  }
+}
+
+/**
+ * requireAdmin + writable check for mutations.
+ */
+export async function requireWritableAdmin(): Promise<Session> {
+  const session = await requireAdmin();
+  assertAdminWritable();
   return session;
 }
 
@@ -43,10 +67,7 @@ export async function requireAdmin(): Promise<Session> {
  * Check if an email is in the admin whitelist.
  * Safe to call from any context.
  */
-export function isAdminEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  return ADMIN_EMAILS.includes(email);
-}
+// isAdminEmail re-exported from ./emails
 
 /**
  * Validate a UUID (v4/v7) format for user IDs.
@@ -70,4 +91,18 @@ export function sanitizeSearch(
 ): string {
   if (!input) return "";
   return input.trim().slice(0, maxLength);
+}
+
+/** Require a non-empty control reason for grant/revoke mutations. */
+export function requireControlReason(
+  reason: string | null | undefined,
+  fieldLabel = "Reason"
+): string {
+  const trimmed = typeof reason === "string" ? reason.trim() : "";
+  if (trimmed.length < 3) {
+    throw new Error(
+      `VALIDATION: ${fieldLabel} is required (at least 3 characters) for this control action`
+    );
+  }
+  return trimmed.slice(0, 255);
 }

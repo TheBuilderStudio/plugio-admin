@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "ssh -i ~/.ssh/plugio_auto -f -N -L 3307:127.0.0.1:3306 slangera@72.62.196.188 2>/dev/null || true && next dev --port 3001",
+    "dev": "next dev --port 3001",
+    "dev:remote": "ssh -i ~/.ssh/plugio_auto -f -N -L 3307:127.0.0.1:3306 slangera@72.62.196.188 2>/dev/null || true && next dev --port 3001",
     "build": "next build",
     "start": "next start --port 3001",
     "lint": "next lint"

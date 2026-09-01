@@ -38,11 +38,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return false;
       }
 
-      const isAdmin = ADMIN_EMAILS.includes(user.email);
+      const normalizedEmail = user.email.trim().toLowerCase();
+      const isAdmin = ADMIN_EMAILS.includes(normalizedEmail);
 
       if (isAdmin) {
         // We log business actions (approve/reject) in server actions.
-        console.log(`[AUTH] Admin login: ${user.email}`);
+        console.log(`[AUTH] Admin login: ${normalizedEmail}`);
         return true;
       }
 

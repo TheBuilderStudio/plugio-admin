@@ -47,18 +47,72 @@ export interface DbUser {
   updated_at: Date;
 }
 
+export type PlanIdValue = "TRIAL" | "CREATOR" | "PRO";
+export type GrantPlanId = "CREATOR" | "PRO";
+export type GrantStatus = "ACTIVE" | "REVOKED" | "EXPIRED";
+export type GrantDurationDays = 30 | 60 | 90;
+
+/** Stored duration may grow beyond the original 30/60/90 after extends. */
+export type GrantDurationStored = number;
+
 /** Mirrors the plugio_db `subscriptions` table */
 export interface DbSubscription {
   id: string;
   user_id: string;
   subscription_status: SubscriptionStatusValue;
+  plan_id: PlanIdValue | null;
   plan_started_at: Date | null;
   trial_ends_at: Date | null;
   pro_period_end_at: Date | null;
   has_used_trial: boolean;
-  billing_interval: "MONTHLY" | "YEARLY" | null;
+  billing_interval: "MONTHLY" | "YEARLY" | "TWO_MONTH" | "THREE_MONTH" | null;
+  payment_last4: string | null;
+  external_payment_id: string | null;
+  external_order_id: string | null;
   created_at: Date;
   updated_at: Date;
+}
+
+/** Mirrors the plugio_db `trial_coupons` table (+ redeemed_count from coupon_usage) */
+export interface TrialCouponRow {
+  id: string;
+  code: string;
+  max_redemptions: number | null;
+  active: boolean;
+  note: string | null;
+  created_by: string | null;
+  created_at: Date;
+  updated_at: Date;
+  redeemed_count: number;
+}
+
+/** Mirrors the plugio_db `admin_access_grants` table */
+export interface AdminAccessGrantRow {
+  id: string;
+  user_id: string;
+  plan_id: GrantPlanId;
+  starts_at: Date;
+  ends_at: Date;
+  status: GrantStatus;
+  duration_days: GrantDurationStored;
+  reason: string | null;
+  notes: string | null;
+  granted_by_admin_email: string;
+  previous_effective_plan: PlanIdValue | null;
+  revoked_at: Date | null;
+  revoked_by_admin_email: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+/** Recent trial coupon redemption for control-plane visibility */
+export interface CouponRedemptionRow {
+  id: string;
+  user_id: string;
+  user_email: string | null;
+  user_name: string | null;
+  coupon_code: string;
+  redeemed_at: Date;
 }
 
 /** Mirrors the plugio_db `social_accounts` table */
@@ -100,6 +154,74 @@ export interface DashboardStats {
   new_last_7_days: number;
 }
 
+/** Founder / admin home — metrics backed by real Plugio tables only */
+export interface BusinessOverview {
+  access: DashboardStats;
+  revenue: {
+    /** Sum of paid SUCCESS audit amounts (amount > 0), all time */
+    total_collected_usd: number;
+    /** Same, last 30 days */
+    collected_30d_usd: number;
+    /** Paid SUCCESS events (amount > 0) — invoice source of truth */
+    paid_checkouts: number;
+    paid_checkouts_30d: number;
+    /** Estimated MRR from ACTIVE Creator/Pro × catalog */
+    estimated_mrr_usd: number;
+  };
+  plans: {
+    active_creator: number;
+    active_pro: number;
+    trialing: number;
+    complimentary_grants: number;
+    expired: number;
+    none: number;
+  };
+  coupons: {
+    active_codes: number;
+    redemptions_7d: number;
+  };
+  social: {
+    active_accounts: number;
+    users_connected: number;
+    youtube: number;
+    instagram: number;
+    facebook: number;
+    sync_failed: number;
+    syncing: number;
+  };
+  content: {
+    total: number;
+    published: number;
+    scheduled: number;
+    failed: number;
+    drafts: number;
+    created_7d: number;
+    creators_with_content: number;
+  };
+  activation: {
+    /** Approved users with ≥1 active social account */
+    approved_with_social: number;
+  };
+  attention: {
+    pending_beta: number;
+    payment_failures_7d: number;
+    grants_expiring_7d: number;
+    sync_failed: number;
+    content_failed: number;
+  };
+}
+
+/** Complimentary grant ending soon (dashboard attention list) */
+export interface ExpiringGrantRow {
+  id: string;
+  user_id: string;
+  user_email: string | null;
+  user_name: string | null;
+  plan_id: GrantPlanId;
+  ends_at: Date;
+  duration_days: number;
+}
+
 /** Row in the admin users table */
 export interface AdminUserRow {
   id: string;
@@ -115,10 +237,14 @@ export interface AdminUserRow {
 /** Full user detail for the detail page */
 export interface AdminUserDetail extends DbUser {
   subscription_status: SubscriptionStatusValue | null;
-  billing_interval: "MONTHLY" | "YEARLY" | null;
+  plan_id: PlanIdValue | null;
+  has_used_trial: boolean | null;
+  billing_interval: "MONTHLY" | "YEARLY" | "TWO_MONTH" | "THREE_MONTH" | null;
   trial_ends_at: Date | null;
   plan_started_at: Date | null;
   pro_period_end_at: Date | null;
+  payment_last4: string | null;
+  active_grant?: AdminAccessGrantRow | null;
   social_accounts: DbSocialAccount[];
   content_count: number;
 }
@@ -150,6 +276,15 @@ export interface RecentActivityItem {
   occurred_at: Date;
 }
 
+/** One cached payload for the Admin Overview page (metrics + feeds). */
+export interface AdminOverviewPayload {
+  metrics: BusinessOverview;
+  activity: RecentActivityItem[];
+  expiringGrants: ExpiringGrantRow[];
+  /** ISO timestamp when this cached payload was built */
+  generatedAt: string;
+}
+
 /** Paginated result wrapper */
 export interface PaginatedResult<T> {
   items: T[];
@@ -168,9 +303,18 @@ export interface AdminAuditLog {
     | "BETA_REJECT"
     | "USER_DISABLE"
     | "USER_ENABLE"
+    | "COUPON_CREATE"
+    | "COUPON_UPDATE"
+    | "COUPON_ACTIVATE"
+    | "COUPON_DEACTIVATE"
+    | "BILLING_GRANT"
+    | "BILLING_GRANT_EXTEND"
+    | "BILLING_GRANT_CHANGE"
+    | "BILLING_GRANT_REVOKE"
+    | "BILLING_REVOKE"
+    // Legacy — kept for reading old audit logs; do not emit new entries
     | "BILLING_TRIAL_GRANT"
-    | "BILLING_LIFETIME_GRANT"
-    | "BILLING_REVOKE";
+    | "BILLING_LIFETIME_GRANT";
   adminEmail: string;
   targetUserId?: string;
   targetEmail?: string;

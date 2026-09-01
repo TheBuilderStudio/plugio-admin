@@ -70,7 +70,11 @@ export async function GET() {
         "Content-Disposition": 'attachment; filename="plugio-users-export.csv"',
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.startsWith("UNAUTHORIZED") || message.startsWith("FORBIDDEN")) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
     console.error("[Export Users API Error]:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
