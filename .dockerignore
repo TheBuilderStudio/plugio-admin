@@ -1,0 +1,33 @@
+# ============================================================
+# Admin Docker build context exclusions
+# ============================================================
+
+# Dependencies and build output — rebuilt in the container
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+
+# Secrets & environment
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+
+# Git
+.git/
+.github/
+.gitignore
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
