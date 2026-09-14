@@ -5,30 +5,27 @@
  * NEVER use string interpolation for user input inside SQL.
  *
  * These functions query the existing plugio_db tables directly.
- * No new tables are created — we work with the existing schema.
+ * billing_plan_settings is the admin Plans catalog (V44).
  */
 
-import { pool, getActivePool, getPoolForContext } from "./index";
+import { pool, getPoolForContext, getActivePool } from "./index";
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
-import { PAGE_SIZE } from "@/constants";
+import { PAGE_SIZE, PLAN_CATALOG_USD, type AdminPlanCatalog } from "@/constants";
 import type {
   DashboardStats,
-  BusinessOverview,
-  ExpiringGrantRow,
   AdminUserRow,
   AdminUserDetail,
+  AdminUserListFilter,
   BetaRequestRow,
-  RecentActivityItem,
   PaginatedResult,
   DbSocialAccount,
   DbPaymentAuditEvent,
   TrialCouponRow,
+  PlanCouponRow,
   CouponRedemptionRow,
-  AdminAccessGrantRow,
-  GrantPlanId,
-  GrantDurationDays,
-  PlanIdValue,
+  RecentActivityItem,
+  BusinessOverview,
 } from "@/types";
 
 // ─── Dashboard ────────────────────────────────────────────
@@ -159,46 +156,6 @@ export const getPendingBetaCount = unstable_cache(
   { revalidate: 60, tags: ["admin-overview", "dashboard", "users", "beta"] }
 );
 
-/**
- * Complimentary grants ending within the next 7 days.
- */
-export async function listExpiringGrants(limit = 8): Promise<ExpiringGrantRow[]> {
-  const safeLimit = Math.min(Math.max(1, Math.floor(limit)), 50);
-  try {
-    const [rows] = await pool.execute<any[]>(
-      `
-      SELECT
-        g.id,
-        g.user_id,
-        g.plan_id,
-        g.ends_at,
-        g.duration_days,
-        u.email AS user_email,
-        u.name AS user_name
-      FROM admin_access_grants g
-      LEFT JOIN users u ON u.id = g.user_id
-      WHERE g.status = 'ACTIVE'
-        AND g.ends_at > NOW(6)
-        AND g.ends_at <= DATE_ADD(NOW(6), INTERVAL 7 DAY)
-      ORDER BY g.ends_at ASC
-      LIMIT ${safeLimit}
-    `
-    );
-    return rows.map((r) => ({
-      id: r.id,
-      user_id: r.user_id,
-      user_email: r.user_email ?? null,
-      user_name: r.user_name ?? null,
-      plan_id: r.plan_id,
-      ends_at: new Date(r.ends_at),
-      duration_days: Number(r.duration_days),
-    }));
-  } catch (error: any) {
-    if (error?.code === "ER_NO_SUCH_TABLE") return [];
-    throw error;
-  }
-}
-
 // ─── Users ────────────────────────────────────────────────
 
 /**
@@ -207,7 +164,7 @@ export async function listExpiringGrants(limit = 8): Promise<ExpiringGrantRow[]>
  */
 export async function getUsers(
   search: string,
-  filter: "ALL" | "SUBSCRIBED" | "FREE" | "PAID" | "TRIALING",
+  filter: AdminUserListFilter,
   page: number,
   pageSize: number = PAGE_SIZE
 ): Promise<PaginatedResult<AdminUserRow>> {
@@ -224,6 +181,19 @@ export async function getUsers(
     filterClause = "AND (s.subscription_status = 'ACTIVE' OR s.subscription_status = 'TRIALING')";
   } else if (filter === "FREE") {
     filterClause = "AND (s.subscription_status IS NULL OR s.subscription_status NOT IN ('ACTIVE', 'TRIALING'))";
+  } else if (filter === "APPROVED_NO_TRIAL") {
+    filterClause =
+      "AND u.access_status = 'APPROVED' AND (s.subscription_status IS NULL OR s.subscription_status = 'NONE')";
+  } else if (filter === "TRIAL_NO_PUBLISH") {
+    filterClause = `AND s.subscription_status = 'TRIALING' AND NOT EXISTS (
+      SELECT 1 FROM content c
+      WHERE c.user_id = u.id AND LOWER(c.status) IN ('published', 'scheduled')
+    )`;
+  } else if (filter === "TRIAL_ENDING") {
+    filterClause = `AND s.subscription_status = 'TRIALING'
+      AND s.trial_ends_at IS NOT NULL
+      AND s.trial_ends_at > NOW(6)
+      AND s.trial_ends_at <= DATE_ADD(NOW(6), INTERVAL 2 DAY)`;
   }
 
   const safePageSize = Math.min(Math.max(1, Math.floor(pageSize)), 200);
@@ -281,7 +251,7 @@ export async function getUsers(
 export async function getUserDetail(
   userId: string
 ): Promise<AdminUserDetail | null> {
-  const [[rows], socialResult, contentResult, activeGrant] = await Promise.all([
+  const [[rows], socialResult, contentResult] = await Promise.all([
     pool.execute<any[]>(
       `
       SELECT
@@ -311,15 +281,20 @@ export async function getUserDetail(
       [userId]
     ),
     pool
-      .execute<any[]>(`SELECT COUNT(*) AS count FROM content WHERE user_id = ?`, [userId])
+      .execute<any[]>(
+        `SELECT
+           COUNT(*) AS count,
+           SUM(CASE WHEN LOWER(status) IN ('published', 'scheduled') THEN 1 ELSE 0 END) AS published_count
+         FROM content WHERE user_id = ?`,
+        [userId]
+      )
       .then((r) => r)
       .catch((error: any) => {
         if (error?.code !== "ER_NO_SUCH_TABLE") {
           console.warn("Error fetching content count:", error.message);
         }
-        return [[{ count: 0 }]] as any;
+        return [[{ count: 0, published_count: 0 }]] as any;
       }),
-    getActiveGrantForUser(userId),
   ]);
 
   if (!rows.length) return null;
@@ -327,6 +302,7 @@ export async function getUserDetail(
   const [socialRows] = socialResult;
   const [contentCountRows] = contentResult;
   const contentCount = Number(contentCountRows[0]?.count ?? 0);
+  const publishedCount = Number(contentCountRows[0]?.published_count ?? 0);
 
   const user = rows[0];
   const socialAccounts: DbSocialAccount[] = socialRows.map((s) => ({
@@ -359,9 +335,9 @@ export async function getUserDetail(
       ? new Date(user.plan_started_at)
       : null,
     pro_period_end_at: user.pro_period_end_at ? new Date(user.pro_period_end_at) : null,
-    active_grant: activeGrant,
     social_accounts: socialAccounts,
     content_count: contentCount,
+    published_count: publishedCount,
   };
 }
 
@@ -589,6 +565,8 @@ function mapTrialCouponRow(r: any): TrialCouponRow {
       r.max_redemptions === null || r.max_redemptions === undefined
         ? null
         : Number(r.max_redemptions),
+    percent_off: Number(r.percent_off ?? 90),
+    expires_at: new Date(r.expires_at),
     active: Boolean(r.active),
     note: r.note ?? null,
     created_by: r.created_by ?? null,
@@ -608,6 +586,8 @@ export async function listTrialCoupons(): Promise<TrialCouponRow[]> {
       tc.id,
       tc.code,
       tc.max_redemptions,
+      tc.percent_off,
+      tc.expires_at,
       tc.active,
       tc.note,
       tc.created_by,
@@ -634,6 +614,8 @@ export async function getTrialCouponByCode(
       tc.id,
       tc.code,
       tc.max_redemptions,
+      tc.percent_off,
+      tc.expires_at,
       tc.active,
       tc.note,
       tc.created_by,
@@ -656,26 +638,62 @@ export async function getTrialCouponByCode(
 export async function createTrialCoupon(params: {
   code: string;
   maxRedemptions: number | null;
+  percentOff: number;
+  expiresAt: Date;
   note: string | null;
   createdBy: string;
 }): Promise<TrialCouponRow> {
   const id = crypto.randomUUID();
+  const activePool = await getActivePool();
+  const conn = await activePool.getConnection();
   try {
-    await pool.execute(
-      `
-      INSERT INTO trial_coupons
-        (id, code, max_redemptions, active, note, created_by, created_at, updated_at)
-      VALUES (?, ?, ?, 1, ?, ?, NOW(6), NOW(6))
-    `,
-      [id, params.code, params.maxRedemptions, params.note, params.createdBy]
-    );
-  } catch (error: any) {
-    if (error?.code === "ER_DUP_ENTRY") {
-      const dup = new Error(`Coupon code ${params.code} already exists`);
-      (dup as any).code = "DUPLICATE";
-      throw dup;
+    await conn.beginTransaction();
+    try {
+      await conn.execute(
+        `INSERT INTO coupon_code_registry (code, kind, created_at) VALUES (?, 'TRIAL', NOW(6))`,
+        [params.code]
+      );
+    } catch (error: any) {
+      if (error?.code === "ER_DUP_ENTRY") {
+        const dup = new Error(`Coupon code ${params.code} already exists`);
+        (dup as any).code = "DUPLICATE";
+        throw dup;
+      }
+      if (error?.code !== "ER_NO_SUCH_TABLE") {
+        throw error;
+      }
     }
+    try {
+      await conn.execute(
+        `
+        INSERT INTO trial_coupons
+          (id, code, max_redemptions, percent_off, expires_at, active, note, created_by, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?, NOW(6), NOW(6))
+      `,
+        [
+          id,
+          params.code,
+          params.maxRedemptions,
+          params.percentOff,
+          params.expiresAt,
+          params.note,
+          params.createdBy,
+        ]
+      );
+    } catch (error: any) {
+      if (error?.code === "ER_DUP_ENTRY") {
+        const dup = new Error(`Coupon code ${params.code} already exists`);
+        (dup as any).code = "DUPLICATE";
+        throw dup;
+      }
+      throw error;
+    }
+    await conn.commit();
+  } catch (error) {
+    await conn.rollback();
     throw error;
+  } finally {
+    conn.release();
   }
 
   const created = await getTrialCouponByCode(params.code);
@@ -695,10 +713,12 @@ export async function updateTrialCoupon(
     maxRedemptions?: number | null;
     note?: string | null;
     active?: boolean;
+    percentOff?: number;
+    expiresAt?: Date;
   }
 ): Promise<number> {
   const sets: string[] = [];
-  const values: (string | number | null)[] = [];
+  const values: (string | number | Date | null)[] = [];
 
   if (updates.maxRedemptions !== undefined) {
     sets.push("max_redemptions = ?");
@@ -711,6 +731,14 @@ export async function updateTrialCoupon(
   if (updates.active !== undefined) {
     sets.push("active = ?");
     values.push(updates.active ? 1 : 0);
+  }
+  if (updates.percentOff !== undefined) {
+    sets.push("percent_off = ?");
+    values.push(updates.percentOff);
+  }
+  if (updates.expiresAt !== undefined) {
+    sets.push("expires_at = ?");
+    values.push(updates.expiresAt);
   }
 
   if (sets.length === 0) return 0;
@@ -744,81 +772,6 @@ export async function setTrialCouponActive(
   return Number(result?.affectedRows ?? 0);
 }
 
-// ─── Admin Access Grants ──────────────────────────────────
-
-function mapAdminGrantRow(r: any): AdminAccessGrantRow {
-  return {
-    id: r.id,
-    user_id: r.user_id,
-    plan_id: r.plan_id,
-    starts_at: new Date(r.starts_at),
-    ends_at: new Date(r.ends_at),
-    status: r.status,
-    duration_days: Number(r.duration_days),
-    reason: r.reason ?? null,
-    notes: r.notes ?? null,
-    granted_by_admin_email: r.granted_by_admin_email,
-    previous_effective_plan: r.previous_effective_plan ?? null,
-    revoked_at: r.revoked_at ? new Date(r.revoked_at) : null,
-    revoked_by_admin_email: r.revoked_by_admin_email ?? null,
-    created_at: new Date(r.created_at),
-    updated_at: new Date(r.updated_at),
-  };
-}
-
-/**
- * Active complimentary grant for a user (status ACTIVE and ends_at > now).
- * Prefers higher plan tier, then later ends_at.
- */
-export async function getActiveGrantForUser(
-  userId: string
-): Promise<AdminAccessGrantRow | null> {
-  try {
-    const [rows] = await pool.execute<any[]>(
-      `
-      SELECT *
-      FROM admin_access_grants
-      WHERE user_id = ?
-        AND status = 'ACTIVE'
-        AND starts_at <= NOW(6)
-        AND ends_at > NOW(6)
-      ORDER BY
-        CASE plan_id WHEN 'PRO' THEN 2 WHEN 'CREATOR' THEN 1 ELSE 0 END DESC,
-        ends_at DESC
-      LIMIT 1
-    `,
-      [userId]
-    );
-    return rows[0] ? mapAdminGrantRow(rows[0]) : null;
-  } catch (error: any) {
-    if (error.code === "ER_NO_SUCH_TABLE") return null;
-    throw error;
-  }
-}
-
-/**
- * All grants for a user, newest first.
- */
-export async function listGrantsForUser(
-  userId: string
-): Promise<AdminAccessGrantRow[]> {
-  try {
-    const [rows] = await pool.execute<any[]>(
-      `
-      SELECT *
-      FROM admin_access_grants
-      WHERE user_id = ?
-      ORDER BY created_at DESC
-    `,
-      [userId]
-    );
-    return rows.map(mapAdminGrantRow);
-  } catch (error: any) {
-    if (error.code === "ER_NO_SUCH_TABLE") return [];
-    throw error;
-  }
-}
-
 /**
  * Recent coupon redemptions for the control panel (who used which code).
  */
@@ -829,10 +782,62 @@ export async function listRecentCouponRedemptions(
   try {
     const [rows] = await pool.execute<any[]>(
       `
+      SELECT * FROM (
+        SELECT
+          r.id,
+          r.user_id,
+          r.coupon_code,
+          'TRIAL' AS kind,
+          r.payable_cents,
+          r.redeemed_at,
+          u.email AS user_email,
+          u.name AS user_name
+        FROM coupon_redemptions r
+        LEFT JOIN users u ON u.id = r.user_id
+        UNION ALL
+        SELECT
+          p.id,
+          p.user_id,
+          p.coupon_code,
+          p.plan AS kind,
+          p.payable_cents,
+          p.redeemed_at,
+          u.email AS user_email,
+          u.name AS user_name
+        FROM plan_coupon_redemptions p
+        LEFT JOIN users u ON u.id = p.user_id
+      ) x
+      ORDER BY x.redeemed_at DESC
+      LIMIT ${safeLimit}
+    `
+    );
+    return rows.map((r) => ({
+      id: r.id,
+      user_id: r.user_id,
+      user_email: r.user_email ?? null,
+      user_name: r.user_name ?? null,
+      coupon_code: r.coupon_code,
+      kind: r.kind === "CREATOR" || r.kind === "PRO" ? r.kind : "TRIAL",
+      payable_cents: r.payable_cents == null ? null : Number(r.payable_cents),
+      redeemed_at: new Date(r.redeemed_at),
+    }));
+  } catch (error: any) {
+    if (error.code === "ER_NO_SUCH_TABLE" || error.code === "ER_BAD_FIELD_ERROR") {
+      return listTrialOnlyRedemptions(safeLimit);
+    }
+    throw error;
+  }
+}
+
+async function listTrialOnlyRedemptions(safeLimit: number): Promise<CouponRedemptionRow[]> {
+  try {
+    const [rows] = await pool.execute<any[]>(
+      `
       SELECT
         r.id,
         r.user_id,
         r.coupon_code,
+        r.payable_cents,
         r.redeemed_at,
         u.email AS user_email,
         u.name AS user_name
@@ -848,234 +853,381 @@ export async function listRecentCouponRedemptions(
       user_email: r.user_email ?? null,
       user_name: r.user_name ?? null,
       coupon_code: r.coupon_code,
+      kind: "TRIAL" as const,
+      payable_cents: r.payable_cents == null ? null : Number(r.payable_cents),
       redeemed_at: new Date(r.redeemed_at),
     }));
+  } catch (error: any) {
+    if (error.code === "ER_NO_SUCH_TABLE") return [];
+    if (error.code === "ER_BAD_FIELD_ERROR") {
+      const [rows] = await pool.execute<any[]>(
+        `
+        SELECT
+          r.id,
+          r.user_id,
+          r.coupon_code,
+          r.redeemed_at,
+          u.email AS user_email,
+          u.name AS user_name
+        FROM coupon_redemptions r
+        LEFT JOIN users u ON u.id = r.user_id
+        ORDER BY r.redeemed_at DESC
+        LIMIT ${safeLimit}
+      `
+      );
+      return rows.map((r) => ({
+        id: r.id,
+        user_id: r.user_id,
+        user_email: r.user_email ?? null,
+        user_name: r.user_name ?? null,
+        coupon_code: r.coupon_code,
+        kind: "TRIAL" as const,
+        payable_cents: 0,
+        redeemed_at: new Date(r.redeemed_at),
+      }));
+    }
+    throw error;
+  }
+}
+
+function mapPlanCouponRow(r: any): PlanCouponRow {
+  return {
+    id: r.id,
+    code: r.code,
+    plan: r.plan === "PRO" ? "PRO" : "CREATOR",
+    percent_off: Number(r.percent_off),
+    max_redemptions: r.max_redemptions == null ? null : Number(r.max_redemptions),
+    expires_at: new Date(r.expires_at),
+    active: Boolean(r.active),
+    note: r.note ?? null,
+    created_by: r.created_by ?? null,
+    created_at: new Date(r.created_at),
+    updated_at: new Date(r.updated_at),
+    redeemed_count: Number(r.redeemed_count ?? 0),
+  };
+}
+
+export async function listPlanCoupons(): Promise<PlanCouponRow[]> {
+  try {
+    const [rows] = await pool.execute<any[]>(
+      `
+      SELECT
+        pc.id,
+        pc.code,
+        pc.plan,
+        pc.percent_off,
+        pc.max_redemptions,
+        pc.expires_at,
+        pc.active,
+        pc.note,
+        pc.created_by,
+        pc.created_at,
+        pc.updated_at,
+        COALESCE(cu.redeemed_count, 0) AS redeemed_count
+      FROM plan_coupons pc
+      LEFT JOIN coupon_usage cu ON cu.coupon_code = pc.code
+      ORDER BY pc.created_at DESC
+    `
+    );
+    return rows.map(mapPlanCouponRow);
   } catch (error: any) {
     if (error.code === "ER_NO_SUCH_TABLE") return [];
     throw error;
   }
 }
 
-/**
- * Create a new complimentary access grant.
- */
-export async function createAdminGrant(params: {
-  userId: string;
-  planId: GrantPlanId;
-  startsAt: Date;
-  endsAt: Date;
-  durationDays: number;
-  reason: string | null;
-  notes: string | null;
-  grantedByAdminEmail: string;
-  previousEffectivePlan: PlanIdValue | null;
-}): Promise<AdminAccessGrantRow> {
-  const id = crypto.randomUUID();
-  await pool.execute(
-    `
-    INSERT INTO admin_access_grants (
-      id, user_id, plan_id, starts_at, ends_at, status, duration_days,
-      reason, notes, granted_by_admin_email, previous_effective_plan,
-      revoked_at, revoked_by_admin_email, created_at, updated_at
-    ) VALUES (
-      ?, ?, ?, ?, ?, 'ACTIVE', ?,
-      ?, ?, ?, ?,
-      NULL, NULL, NOW(6), NOW(6)
-    )
-  `,
-    [
-      id,
-      params.userId,
-      params.planId,
-      params.startsAt,
-      params.endsAt,
-      params.durationDays,
-      params.reason,
-      params.notes,
-      params.grantedByAdminEmail,
-      params.previousEffectivePlan,
-    ]
-  );
-
-  const [rows] = await pool.execute<any[]>(
-    `SELECT * FROM admin_access_grants WHERE id = ? LIMIT 1`,
-    [id]
-  );
-  return mapAdminGrantRow(rows[0]);
+export async function planCouponSchemaAvailable(): Promise<boolean> {
+  try {
+    await pool.execute(`SELECT 1 FROM plan_coupons LIMIT 1`);
+    return true;
+  } catch (error: any) {
+    if (error.code === "ER_NO_SUCH_TABLE") return false;
+    throw error;
+  }
 }
 
-/**
- * Atomically revoke all live ACTIVE grants for a user and insert one new grant.
- * Prevents dual-ACTIVE races and silent access loss on replace.
- */
-export async function replaceAdminGrantAtomic(params: {
-  userId: string;
-  planId: GrantPlanId;
-  startsAt: Date;
-  endsAt: Date;
-  durationDays: number;
-  reason: string | null;
-  notes: string | null;
-  grantedByAdminEmail: string;
-  previousEffectivePlan: PlanIdValue | null;
-}): Promise<{ grant: AdminAccessGrantRow; revokedCount: number }> {
+export async function getPlanCouponByCode(code: string): Promise<PlanCouponRow | null> {
+  const [rows] = await pool.execute<any[]>(
+    `
+    SELECT
+      pc.id,
+      pc.code,
+      pc.plan,
+      pc.percent_off,
+      pc.max_redemptions,
+      pc.expires_at,
+      pc.active,
+      pc.note,
+      pc.created_by,
+      pc.created_at,
+      pc.updated_at,
+      COALESCE(cu.redeemed_count, 0) AS redeemed_count
+    FROM plan_coupons pc
+    LEFT JOIN coupon_usage cu ON cu.coupon_code = pc.code
+    WHERE pc.code = ?
+    LIMIT 1
+  `,
+    [code]
+  );
+  return rows[0] ? mapPlanCouponRow(rows[0]) : null;
+}
+
+export async function createPlanCoupon(params: {
+  code: string;
+  plan: "CREATOR" | "PRO";
+  percentOff: number;
+  maxRedemptions: number | null;
+  expiresAt: Date;
+  note: string | null;
+  createdBy: string;
+}): Promise<PlanCouponRow> {
+  const id = crypto.randomUUID();
   const activePool = await getActivePool();
   const conn = await activePool.getConnection();
-  const id = crypto.randomUUID();
   try {
     await conn.beginTransaction();
-
-    const [revokeResult] = await conn.execute<any>(
-      `
-      UPDATE admin_access_grants
-      SET status = 'REVOKED',
-          revoked_at = NOW(6),
-          revoked_by_admin_email = ?,
-          updated_at = NOW(6)
-      WHERE user_id = ?
-        AND status = 'ACTIVE'
+    try {
+      await conn.execute(
+        `INSERT INTO coupon_code_registry (code, kind, created_at) VALUES (?, ?, NOW(6))`,
+        [params.code, params.plan]
+      );
+    } catch (error: any) {
+      if (error?.code === "ER_DUP_ENTRY") {
+        const dup = new Error(`Coupon code ${params.code} already exists`);
+        (dup as any).code = "DUPLICATE";
+        throw dup;
+      }
+      throw error;
+    }
+    try {
+      await conn.execute(
+        `
+        INSERT INTO plan_coupons
+          (id, code, plan, percent_off, max_redemptions, expires_at, active, note, created_by, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, NOW(6), NOW(6))
       `,
-      [params.grantedByAdminEmail, params.userId]
-    );
-    const revokedCount = Number(revokeResult?.affectedRows ?? 0);
-
-    await conn.execute(
-      `
-      INSERT INTO admin_access_grants (
-        id, user_id, plan_id, starts_at, ends_at, status, duration_days,
-        reason, notes, granted_by_admin_email, previous_effective_plan,
-        revoked_at, revoked_by_admin_email, created_at, updated_at
-      ) VALUES (
-        ?, ?, ?, ?, ?, 'ACTIVE', ?,
-        ?, ?, ?, ?,
-        NULL, NULL, NOW(6), NOW(6)
-      )
-      `,
-      [
-        id,
-        params.userId,
-        params.planId,
-        params.startsAt,
-        params.endsAt,
-        params.durationDays,
-        params.reason,
-        params.notes,
-        params.grantedByAdminEmail,
-        params.previousEffectivePlan,
-      ]
-    );
-
+        [
+          id,
+          params.code,
+          params.plan,
+          params.percentOff,
+          params.maxRedemptions,
+          params.expiresAt,
+          params.note,
+          params.createdBy,
+        ]
+      );
+    } catch (error: any) {
+      if (error?.code === "ER_DUP_ENTRY") {
+        const dup = new Error(`Coupon code ${params.code} already exists`);
+        (dup as any).code = "DUPLICATE";
+        throw dup;
+      }
+      throw error;
+    }
     await conn.commit();
-
-    const [rows] = await activePool.execute<any[]>(
-      `SELECT * FROM admin_access_grants WHERE id = ? LIMIT 1`,
-      [id]
-    );
-    return { grant: mapAdminGrantRow(rows[0]), revokedCount };
   } catch (error) {
     await conn.rollback();
     throw error;
   } finally {
     conn.release();
   }
+
+  const created = await getPlanCouponByCode(params.code);
+  if (!created) {
+    throw new Error("Failed to load created plan coupon");
+  }
+  return created;
 }
 
-/**
- * Update fields on an existing grant (extend / change plan / notes).
- */
-export async function updateAdminGrant(
+export async function updatePlanCoupon(
   id: string,
   updates: {
-    planId?: GrantPlanId;
-    endsAt?: Date;
-    durationDays?: number;
-    reason?: string | null;
-    notes?: string | null;
+    maxRedemptions?: number | null;
+    note?: string | null;
+    active?: boolean;
+    expiresAt?: Date;
+    percentOff?: number;
   }
 ): Promise<number> {
   const sets: string[] = [];
   const values: (string | number | Date | null)[] = [];
 
-  if (updates.planId !== undefined) {
-    sets.push("plan_id = ?");
-    values.push(updates.planId);
+  if (updates.maxRedemptions !== undefined) {
+    sets.push("max_redemptions = ?");
+    values.push(updates.maxRedemptions);
   }
-  if (updates.endsAt !== undefined) {
-    sets.push("ends_at = ?");
-    values.push(updates.endsAt);
+  if (updates.note !== undefined) {
+    sets.push("note = ?");
+    values.push(updates.note);
   }
-  if (updates.durationDays !== undefined) {
-    sets.push("duration_days = ?");
-    values.push(updates.durationDays);
+  if (updates.active !== undefined) {
+    sets.push("active = ?");
+    values.push(updates.active ? 1 : 0);
   }
-  if (updates.reason !== undefined) {
-    sets.push("reason = ?");
-    values.push(updates.reason);
+  if (updates.expiresAt !== undefined) {
+    sets.push("expires_at = ?");
+    values.push(updates.expiresAt);
   }
-  if (updates.notes !== undefined) {
-    sets.push("notes = ?");
-    values.push(updates.notes);
+  if (updates.percentOff !== undefined) {
+    sets.push("percent_off = ?");
+    values.push(updates.percentOff);
   }
-
   if (sets.length === 0) return 0;
-
   sets.push("updated_at = NOW(6)");
   values.push(id);
-
   const [result] = await pool.execute<any>(
-    `UPDATE admin_access_grants SET ${sets.join(", ")} WHERE id = ?`,
+    `UPDATE plan_coupons SET ${sets.join(", ")} WHERE id = ?`,
     values
   );
   return Number(result?.affectedRows ?? 0);
 }
 
-/**
- * Revoke an active grant (does NOT touch subscriptions).
- */
-export async function revokeAdminGrant(
-  id: string,
-  revokedBy: string
-): Promise<void> {
-  await pool.execute(
+export async function setPlanCouponActive(id: string, active: boolean): Promise<number> {
+  const [result] = await pool.execute<any>(
     `
-    UPDATE admin_access_grants
-    SET status = 'REVOKED',
-        revoked_at = NOW(6),
-        revoked_by_admin_email = ?,
-        updated_at = NOW(6)
+    UPDATE plan_coupons
+    SET active = ?, updated_at = NOW(6)
     WHERE id = ?
   `,
-    [revokedBy, id]
+    [active ? 1 : 0, id]
   );
+  return Number(result?.affectedRows ?? 0);
 }
 
-/**
- * Subscription snapshot used for grant eligibility / previous_effective_plan.
- */
-export async function getSubscriptionSnapshotForUser(userId: string): Promise<{
-  subscription_status: string | null;
-  plan_id: PlanIdValue | null;
-  pro_period_end_at: Date | null;
-  has_used_trial: boolean | null;
-} | null> {
-  const [rows] = await pool.execute<any[]>(
-    `
-    SELECT subscription_status, plan_id, pro_period_end_at, has_used_trial
-    FROM subscriptions
-    WHERE user_id = ?
-    LIMIT 1
-  `,
-    [userId]
-  );
-  if (!rows[0]) return null;
-  const r = rows[0];
+export async function registerTrialCouponCode(code: string): Promise<void> {
+  try {
+    await pool.execute(
+      `INSERT INTO coupon_code_registry (code, kind, created_at) VALUES (?, 'TRIAL', NOW(6))`,
+      [code]
+    );
+  } catch (error: any) {
+    if (error?.code === "ER_DUP_ENTRY") {
+      const dup = new Error(`Coupon code ${code} already exists`);
+      (dup as any).code = "DUPLICATE";
+      throw dup;
+    }
+    if (error?.code === "ER_NO_SUCH_TABLE") return;
+    throw error;
+  }
+}
+
+function centsToUsd(cents: unknown): number {
+  return Number(cents ?? 0) / 100;
+}
+
+function mapBillingPlanSettingsRow(row: Record<string, unknown>): AdminPlanCatalog {
   return {
-    subscription_status: r.subscription_status ?? null,
-    plan_id: r.plan_id ?? null,
-    pro_period_end_at: r.pro_period_end_at ? new Date(r.pro_period_end_at) : null,
-    has_used_trial:
-      r.has_used_trial !== null && r.has_used_trial !== undefined
-        ? Boolean(r.has_used_trial)
-        : null,
+    currency: "USD",
+    trialDays: Number(row.trial_days ?? PLAN_CATALOG_USD.trialDays),
+    trialPrice: centsToUsd(row.trial_price_cents) || PLAN_CATALOG_USD.trialPrice,
+    CREATOR: {
+      monthly: centsToUsd(row.creator_monthly_cents) || PLAN_CATALOG_USD.CREATOR.monthly,
+      twoMonths: centsToUsd(row.creator_two_month_cents) || PLAN_CATALOG_USD.CREATOR.twoMonths,
+      threeMonths:
+        centsToUsd(row.creator_three_month_cents) || PLAN_CATALOG_USD.CREATOR.threeMonths,
+    },
+    PRO: {
+      monthly: centsToUsd(row.pro_monthly_cents) || PLAN_CATALOG_USD.PRO.monthly,
+      twoMonths: centsToUsd(row.pro_two_month_cents) || PLAN_CATALOG_USD.PRO.twoMonths,
+      threeMonths: centsToUsd(row.pro_three_month_cents) || PLAN_CATALOG_USD.PRO.threeMonths,
+    },
+    channelsPerPlatform: {
+      TRIAL: Number(row.trial_channels_per_platform ?? PLAN_CATALOG_USD.channelsPerPlatform.TRIAL),
+      CREATOR: Number(
+        row.creator_channels_per_platform ?? PLAN_CATALOG_USD.channelsPerPlatform.CREATOR
+      ),
+      PRO: Number(row.pro_channels_per_platform ?? PLAN_CATALOG_USD.channelsPerPlatform.PRO),
+    },
   };
 }
+
+export async function billingPlanSettingsSchemaAvailable(): Promise<boolean> {
+  const activePool = await getActivePool();
+  try {
+    await activePool.execute(`SELECT 1 FROM billing_plan_settings LIMIT 1`);
+    return true;
+  } catch (error: unknown) {
+    const code =
+      typeof error === "object" && error && "code" in error
+        ? String((error as { code?: string }).code)
+        : "";
+    if (code === "ER_NO_SUCH_TABLE") return false;
+    throw error;
+  }
+}
+
+export async function getBillingPlanSettings(): Promise<AdminPlanCatalog> {
+  const activePool = await getActivePool();
+  try {
+    const [rows] = await activePool.execute<any[]>(
+      `SELECT * FROM billing_plan_settings WHERE id = 1 LIMIT 1`
+    );
+    if (!rows[0]) return { ...PLAN_CATALOG_USD };
+    return mapBillingPlanSettingsRow(rows[0]);
+  } catch (error: any) {
+    if (error?.code === "ER_NO_SUCH_TABLE") return { ...PLAN_CATALOG_USD };
+    throw error;
+  }
+}
+
+export async function updateBillingPlanSettings(params: {
+  catalog: AdminPlanCatalog;
+  updatedBy: string;
+}): Promise<void> {
+  const { catalog, updatedBy } = params;
+  const usdToCents = (n: number) => Math.round(n * 100);
+  const activePool = await getActivePool();
+  const [result] = await activePool.execute<any>(
+    `
+    INSERT INTO billing_plan_settings (
+      id,
+      trial_days,
+      trial_price_cents,
+      creator_monthly_cents,
+      creator_two_month_cents,
+      creator_three_month_cents,
+      pro_monthly_cents,
+      pro_two_month_cents,
+      pro_three_month_cents,
+      trial_channels_per_platform,
+      creator_channels_per_platform,
+      pro_channels_per_platform,
+      updated_at,
+      updated_by
+    ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(6), ?)
+    ON DUPLICATE KEY UPDATE
+      trial_days = VALUES(trial_days),
+      trial_price_cents = VALUES(trial_price_cents),
+      creator_monthly_cents = VALUES(creator_monthly_cents),
+      creator_two_month_cents = VALUES(creator_two_month_cents),
+      creator_three_month_cents = VALUES(creator_three_month_cents),
+      pro_monthly_cents = VALUES(pro_monthly_cents),
+      pro_two_month_cents = VALUES(pro_two_month_cents),
+      pro_three_month_cents = VALUES(pro_three_month_cents),
+      trial_channels_per_platform = VALUES(trial_channels_per_platform),
+      creator_channels_per_platform = VALUES(creator_channels_per_platform),
+      pro_channels_per_platform = VALUES(pro_channels_per_platform),
+      updated_at = NOW(6),
+      updated_by = VALUES(updated_by)
+    `,
+    [
+      catalog.trialDays,
+      usdToCents(catalog.trialPrice),
+      usdToCents(catalog.CREATOR.monthly),
+      usdToCents(catalog.CREATOR.twoMonths),
+      usdToCents(catalog.CREATOR.threeMonths),
+      usdToCents(catalog.PRO.monthly),
+      usdToCents(catalog.PRO.twoMonths),
+      usdToCents(catalog.PRO.threeMonths),
+      catalog.channelsPerPlatform.TRIAL,
+      catalog.channelsPerPlatform.CREATOR,
+      catalog.channelsPerPlatform.PRO,
+      updatedBy,
+    ]
+  );
+  void result;
+}
+
+
+

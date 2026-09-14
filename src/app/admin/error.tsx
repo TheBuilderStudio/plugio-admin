@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { AlertCircle, RefreshCcw } from "lucide-react";
+import { RefreshCcw } from "lucide-react";
 
 export default function AdminError({
   error,
@@ -11,35 +11,25 @@ export default function AdminError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // We could log this to an error reporting service here
     console.error("Admin Route Error:", error);
   }, [error]);
 
   return (
-    <div className="flex h-full w-full items-center justify-center p-8 bg-[#F8FAFC]">
-      <div className="bg-white rounded-2xl card-shadow border border-zinc-100 p-8 max-w-md w-full text-center">
-        <div className="inline-flex w-14 h-14 rounded-2xl bg-red-50 border border-red-100 items-center justify-center mb-5">
-          <AlertCircle className="w-7 h-7 text-red-500" strokeWidth={1.5} />
-        </div>
-        <h2 className="text-lg font-bold text-zinc-900 mb-2">
-          Something went wrong
+    <div className="flex h-full items-center justify-center p-8">
+      <div className="admin-card max-w-md p-8 text-center">
+        <p className="admin-kicker">Error</p>
+        <h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--ink)]">
+          This screen could not load
         </h2>
-        <p className="text-sm text-zinc-500 mb-6 leading-relaxed">
-          We encountered an unexpected error while loading this page. This could
-          be a database connection issue or a temporary timeout.
+        <p className="mt-2 text-[14px] leading-relaxed text-[var(--ink-soft)]">
+          Usually a database timeout. Retry, or check Settings for connection health.
         </p>
-        
-        <div className="bg-zinc-50 p-3 rounded-lg text-left overflow-auto mb-6 text-xs font-mono text-zinc-700 border border-zinc-200">
-          <p className="font-bold text-red-600 mb-1">Error Details:</p>
-          <p>{error.message || "Unknown error occurred"}</p>
-          {error.digest && <p className="mt-1 text-[10px] text-zinc-400 font-mono">Digest: {error.digest}</p>}
+        <div className="mt-5 overflow-auto rounded-xl border border-[var(--line)] bg-[#F7F4EE] p-3 text-left text-[12px] font-mono text-[var(--ink-soft)]">
+          {error.message || "Unknown error"}
+          {error.digest ? <p className="mt-1 text-[10px] text-[var(--ink-mute)]">Digest: {error.digest}</p> : null}
         </div>
-
-        <button
-          onClick={() => reset()}
-          className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-2 w-full justify-center"
-        >
-          <RefreshCcw className="w-4 h-4" />
+        <button type="button" onClick={() => reset()} className="admin-btn-primary mt-6 w-full">
+          <RefreshCcw className="h-4 w-4" />
           Try again
         </button>
       </div>

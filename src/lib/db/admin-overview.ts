@@ -8,8 +8,8 @@
  * - Mutations call invalidateAdminOverview() so changes show immediately
  *
  * Freshness model:
- * - Static: PLAN_CATALOG_USD (in-process constants)
- * - Cached (~60s): users, billing, social, content, activity, grants
+ * - Catalog: billing_plan_settings (admin Plans desk), fallback PLAN_CATALOG_USD
+ * - Cached (~60s): users, billing, social, content, activity
  * - Near-real-time after admin writes: tag invalidation from server actions
  * - File audit log: cheap local read (not MySQL); not part of DB cache
  */
@@ -18,11 +18,10 @@ import { unstable_cache, revalidateTag } from "next/cache";
 import { cache } from "react";
 import type { Pool } from "mysql2/promise";
 import { getPoolForContext } from "./index";
-import { toMonthlyUsd } from "@/constants";
+import { PLAN_CATALOG_USD, toMonthlyUsd, type AdminPlanCatalog } from "@/constants";
 import type {
   AdminOverviewPayload,
   BusinessOverview,
-  ExpiringGrantRow,
   RecentActivityItem,
 } from "@/types";
 
@@ -106,7 +105,6 @@ async function queryRevenueAggregates(db: Pool): Promise<{
           )
           AND details IS NOT NULL
           AND details LIKE '%amount=%'
-          AND details NOT LIKE '%mode=TRIAL%'
           AND (
             details LIKE '%currency=USD%'
             OR details NOT LIKE '%currency=%'
@@ -136,6 +134,45 @@ async function queryRevenueAggregates(db: Pool): Promise<{
   }
 }
 
+async function loadPlanCatalog(db: Pool): Promise<AdminPlanCatalog> {
+  try {
+    const [rows] = await db.execute<any[]>(
+      `SELECT * FROM billing_plan_settings WHERE id = 1 LIMIT 1`
+    );
+    const row = rows[0] as Record<string, unknown> | undefined;
+    if (!row) return PLAN_CATALOG_USD;
+    const usd = (cents: unknown, fallback: number) => {
+      const n = Number(cents ?? 0) / 100;
+      return Number.isFinite(n) && n > 0 ? n : fallback;
+    };
+    return {
+      currency: "USD",
+      trialDays: Number(row.trial_days ?? PLAN_CATALOG_USD.trialDays),
+      trialPrice: usd(row.trial_price_cents, PLAN_CATALOG_USD.trialPrice),
+      CREATOR: {
+        monthly: usd(row.creator_monthly_cents, PLAN_CATALOG_USD.CREATOR.monthly),
+        twoMonths: usd(row.creator_two_month_cents, PLAN_CATALOG_USD.CREATOR.twoMonths),
+        threeMonths: usd(row.creator_three_month_cents, PLAN_CATALOG_USD.CREATOR.threeMonths),
+      },
+      PRO: {
+        monthly: usd(row.pro_monthly_cents, PLAN_CATALOG_USD.PRO.monthly),
+        twoMonths: usd(row.pro_two_month_cents, PLAN_CATALOG_USD.PRO.twoMonths),
+        threeMonths: usd(row.pro_three_month_cents, PLAN_CATALOG_USD.PRO.threeMonths),
+      },
+      channelsPerPlatform: {
+        TRIAL: Number(row.trial_channels_per_platform ?? PLAN_CATALOG_USD.channelsPerPlatform.TRIAL),
+        CREATOR: Number(
+          row.creator_channels_per_platform ?? PLAN_CATALOG_USD.channelsPerPlatform.CREATOR
+        ),
+        PRO: Number(row.pro_channels_per_platform ?? PLAN_CATALOG_USD.channelsPerPlatform.PRO),
+      },
+    };
+  } catch (error: any) {
+    if (error?.code === "ER_NO_SUCH_TABLE") return PLAN_CATALOG_USD;
+    throw error;
+  }
+}
+
 async function loadOverviewMetrics(
   dbContext: "production" | "staging"
 ): Promise<AdminOverviewPayload> {
@@ -143,7 +180,6 @@ async function loadOverviewMetrics(
   const [
     accessRow,
     subRows,
-    grants,
     coupons,
     redeems,
     failures,
@@ -152,7 +188,7 @@ async function loadOverviewMetrics(
     activation,
     revenue,
     activity,
-    expiringGrants,
+    catalog,
   ] = await Promise.all([
     // 1) Users + missing subscription rows (one scan)
     safeQueryRows(
@@ -206,27 +242,7 @@ async function loadOverviewMetrics(
       })
     ),
 
-    // 3) Grants
-    safeQueryRows(
-      db,
-      `
-      SELECT
-        SUM(CASE
-              WHEN status = 'ACTIVE'
-               AND starts_at <= NOW(6)
-               AND ends_at > NOW(6)
-              THEN 1 ELSE 0 END) AS active_grants,
-        SUM(CASE
-              WHEN status = 'ACTIVE'
-               AND ends_at > NOW(6)
-               AND ends_at <= DATE_ADD(NOW(6), INTERVAL 7 DAY)
-              THEN 1 ELSE 0 END) AS expiring_7d
-      FROM admin_access_grants
-    `,
-      { active_grants: 0, expiring_7d: 0 }
-    ),
-
-    // 4–5) Coupons
+    // 3–4) Coupons
     safeQueryRows(
       db,
       `
@@ -328,8 +344,8 @@ async function loadOverviewMetrics(
     // 11) Recent activity (bounded UNION — feed only)
     loadRecentActivity(db, 8),
 
-    // 12) Expiring grants list (bounded)
-    loadExpiringGrants(db, 5),
+    // 12) Live catalog for MRR
+    loadPlanCatalog(db),
   ]);
 
   let activeCreator = 0;
@@ -345,10 +361,10 @@ async function loadOverviewMetrics(
 
     if (status === "ACTIVE" && row.plan_id === "CREATOR") {
       activeCreator += cnt;
-      estimatedMrr += toMonthlyUsd("CREATOR", row.billing_interval) * cnt;
+      estimatedMrr += toMonthlyUsd("CREATOR", row.billing_interval, catalog) * cnt;
     } else if (status === "ACTIVE" && row.plan_id === "PRO") {
       activePro += cnt;
-      estimatedMrr += toMonthlyUsd("PRO", row.billing_interval) * cnt;
+      estimatedMrr += toMonthlyUsd("PRO", row.billing_interval, catalog) * cnt;
     } else if (status === "TRIALING") {
       trialing += cnt;
     } else if (status === "EXPIRED") {
@@ -377,7 +393,6 @@ async function loadOverviewMetrics(
       active_creator: activeCreator,
       active_pro: activePro,
       trialing,
-      complimentary_grants: Number(grants.active_grants ?? 0),
       expired,
       none: noneStatus + Number(accessRow.users_without_sub ?? 0),
     },
@@ -409,7 +424,6 @@ async function loadOverviewMetrics(
     attention: {
       pending_beta: Number(accessRow.pending_requests ?? 0),
       payment_failures_7d: Number(failures.failed_7d ?? 0),
-      grants_expiring_7d: Number(grants.expiring_7d ?? 0),
       sync_failed: syncFailed,
       content_failed: contentFailed,
     },
@@ -418,7 +432,6 @@ async function loadOverviewMetrics(
   return {
     metrics,
     activity,
-    expiringGrants,
     generatedAt: new Date().toISOString(),
   };
 }
@@ -475,39 +488,6 @@ async function loadRecentActivity(db: Pool, limit: number): Promise<RecentActivi
   }
 }
 
-async function loadExpiringGrants(db: Pool, limit: number): Promise<ExpiringGrantRow[]> {
-  const safeLimit = Math.min(Math.max(1, Math.floor(limit)), 20);
-  return safeQueryList(
-    db,
-    `
-    SELECT
-      g.id,
-      g.user_id,
-      g.plan_id,
-      g.ends_at,
-      g.duration_days,
-      u.email AS user_email,
-      u.name AS user_name
-    FROM admin_access_grants g
-    LEFT JOIN users u ON u.id = g.user_id
-    WHERE g.status = 'ACTIVE'
-      AND g.ends_at > NOW(6)
-      AND g.ends_at <= DATE_ADD(NOW(6), INTERVAL 7 DAY)
-    ORDER BY g.ends_at ASC
-    LIMIT ${safeLimit}
-  `,
-    (r) => ({
-      id: r.id,
-      user_id: r.user_id,
-      user_email: r.user_email ?? null,
-      user_name: r.user_name ?? null,
-      plan_id: r.plan_id,
-      ends_at: new Date(r.ends_at),
-      duration_days: Number(r.duration_days),
-    })
-  );
-}
-
 /**
  * Single entry point for Admin Overview.
  * Deduped per-request via React cache; cross-request via Next data cache.
@@ -516,7 +496,7 @@ export const getAdminOverview = unstable_cache(
   cache(async (dbContext: "production" | "staging"): Promise<AdminOverviewPayload> => {
     return loadOverviewMetrics(dbContext);
   }),
-  ["admin-overview-v3"],
+  ["admin-overview-v4"],
   {
     revalidate: OVERVIEW_REVALIDATE_SECONDS,
     tags: [OVERVIEW_TAG, "dashboard"],
@@ -531,6 +511,5 @@ export function invalidateAdminOverview(): void {
   revalidateTag("beta");
   revalidateTag("billing");
   revalidateTag("coupons");
-  revalidateTag("grants");
   revalidateTag("payments");
 }

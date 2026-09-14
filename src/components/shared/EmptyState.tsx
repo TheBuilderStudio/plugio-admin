@@ -1,21 +1,23 @@
-import { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-interface EmptyStateProps {
+export function EmptyState({
+  icon: Icon,
+  title,
+  description,
+}: {
   icon: LucideIcon;
   title: string;
   description?: string;
-}
-
-export function EmptyState({ icon: Icon, title, description }: EmptyStateProps) {
+}) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
-      <div className="w-14 h-14 rounded-2xl bg-zinc-100 flex items-center justify-center mb-4">
-        <Icon className="w-7 h-7 text-zinc-400" strokeWidth={1.5} />
+    <div className="flex flex-col items-center justify-center px-8 py-16 text-center">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--line)] bg-[#F7F4EE]">
+        <Icon className="h-6 w-6 text-[var(--ink-mute)]" strokeWidth={1.6} />
       </div>
-      <p className="text-zinc-700 font-semibold text-base">{title}</p>
-      {description && (
-        <p className="text-zinc-400 text-sm mt-1 max-w-xs">{description}</p>
-      )}
+      <p className="text-[15px] font-semibold text-[var(--ink)]">{title}</p>
+      {description ? (
+        <p className="mt-1 max-w-sm text-[13px] text-[var(--ink-soft)]">{description}</p>
+      ) : null}
     </div>
   );
 }

@@ -111,26 +111,3 @@ export function validateCouponCode(code: unknown): string {
 
   return normalized;
 }
-
-/**
- * Validate complimentary grant plan (CREATOR | PRO only).
- */
-export function validateGrantPlan(planId: unknown): "CREATOR" | "PRO" {
-  if (planId === "CREATOR" || planId === "PRO") {
-    return planId;
-  }
-  throw new ValidationError("Plan must be CREATOR or PRO");
-}
-
-/**
- * Validate complimentary grant duration (30 | 60 | 90 days).
- */
-export function validateGrantDuration(days: unknown): 30 | 60 | 90 {
-  if (typeof days === "number") {
-    if (days === 30 || days === 60 || days === 90) return days;
-  }
-  if (typeof days === "string" && /^(30|60|90)$/.test(days.trim())) {
-    return Number(days.trim()) as 30 | 60 | 90;
-  }
-  throw new ValidationError("Duration must be 30, 60, or 90 days");
-}

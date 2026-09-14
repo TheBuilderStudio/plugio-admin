@@ -2,43 +2,30 @@ import type { Metadata } from "next";
 import { signOut } from "@/auth";
 
 export const metadata: Metadata = {
-  title: "Unauthorized — Plugio Admin",
+  title: "Unauthorized — Plugio Console",
 };
 
 export default function UnauthorizedPage() {
   return (
-    <div className="min-h-screen bg-[#18181b] flex items-center justify-center p-4">
-      <div className="text-center">
-        <div className="inline-flex w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 items-center justify-center mb-6">
-          <svg
-            className="w-8 h-8 text-red-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.834-1.732-.834-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z"
-            />
-          </svg>
-        </div>
-        <h1 className="text-white font-bold text-2xl mb-2">Access Denied</h1>
-        <p className="text-zinc-400 text-sm max-w-xs mx-auto mb-8">
-          Your Google account is not authorized to access the Plugio Admin
-          panel.
+    <div className="flex min-h-dvh items-center justify-center bg-[#0A0908] px-6">
+      <div className="max-w-sm text-center">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#FF6719]">
+          Restricted
+        </p>
+        <h1 className="mt-3 text-[28px] font-semibold tracking-tight text-white">
+          You are not on the operator list
+        </h1>
+        <p className="mt-3 text-[14px] leading-relaxed text-white/50">
+          This Google account cannot open the Plugio console. Sign out and use an authorized team account.
         </p>
         <form
+          className="mt-8"
           action={async () => {
             "use server";
             await signOut({ redirectTo: "/login" });
           }}
         >
-          <button
-            type="submit"
-            className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors"
-          >
+          <button type="submit" className="admin-btn-primary mx-auto">
             Sign out and try another account
           </button>
         </form>

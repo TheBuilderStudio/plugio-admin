@@ -3,6 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Output standalone for Docker/VPS deployment
   output: "standalone",
+  // Keep the Next.js issues chip off the operator rail.
+  devIndicators: false,
 
   images: {
     remotePatterns: [

@@ -23,7 +23,7 @@ const config: Config = {
           900: "#7c2d12",
         },
         sidebar: {
-          bg: "#111110",
+          bg: "#0A0908",
           border: "rgba(255,255,255,0.06)",
           text: "#a3a3a3",
           "text-active": "#ffffff",

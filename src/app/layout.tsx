@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Plugio Admin",
-  description: "Internal administration panel for Plugio",
+  title: "Plugio Console",
+  description: "Internal operations console for Plugio",
   robots: "noindex, nofollow",
 };
 
@@ -26,7 +26,7 @@ export default function RootLayout({
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,slnt,wdth,wght,ROND@8..144,-10..0,25..150,400..1000,0..100&display=swap"
         />
-        <meta name="theme-color" content="#FF6719" />
+        <meta name="theme-color" content="#0A0908" />
       </head>
       <body className="font-sans antialiased">{children}</body>
     </html>

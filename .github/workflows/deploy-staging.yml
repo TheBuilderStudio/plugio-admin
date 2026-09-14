@@ -9,7 +9,7 @@ on:
 
 concurrency:
   group: deploy-admin-staging
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read

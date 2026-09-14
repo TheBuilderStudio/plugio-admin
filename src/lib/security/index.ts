@@ -92,17 +92,3 @@ export function sanitizeSearch(
   if (!input) return "";
   return input.trim().slice(0, maxLength);
 }
-
-/** Require a non-empty control reason for grant/revoke mutations. */
-export function requireControlReason(
-  reason: string | null | undefined,
-  fieldLabel = "Reason"
-): string {
-  const trimmed = typeof reason === "string" ? reason.trim() : "";
-  if (trimmed.length < 3) {
-    throw new Error(
-      `VALIDATION: ${fieldLabel} is required (at least 3 characters) for this control action`
-    );
-  }
-  return trimmed.slice(0, 255);
-}

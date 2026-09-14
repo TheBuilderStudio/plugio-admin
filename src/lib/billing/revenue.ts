@@ -17,14 +17,11 @@ export function extractDetailValue(
 
 /**
  * Paid USD amount from an audit details string.
- * Returns 0 for trials, missing/invalid amounts, or non-USD currencies
- * (do not mix currencies into a USD revenue total).
+ * Returns 0 for missing/invalid amounts, leftover $0 trials, or non-USD
+ * currencies (do not mix currencies into a USD revenue total).
  */
 export function extractPaidUsdAmount(details: string | null | undefined): number {
   if (!details) return 0;
-
-  const mode = extractDetailValue(details, "mode");
-  if (mode && mode.toUpperCase() === "TRIAL") return 0;
 
   const currency = (extractDetailValue(details, "currency") ?? "USD").toUpperCase();
   if (currency !== "USD") return 0;

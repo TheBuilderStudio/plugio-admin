@@ -7,10 +7,6 @@ import { AdminReadOnlyProvider } from "@/components/shared/AdminReadOnlyContext"
 import { getActiveDbContext, hasDistinctStagingDb } from "@/lib/db";
 import { getPendingBetaCount } from "@/lib/db/queries";
 
-/**
- * Admin section layout — Plugio dashboard shell:
- * dark sidebar + frosted top bar + soft gray canvas with brand glow.
- */
 export default async function AdminLayout({
   children,
 }: {
@@ -41,24 +37,20 @@ export default async function AdminLayout({
 
   return (
     <AdminReadOnlyProvider isReadOnly={isReadOnly}>
-      <div className="relative flex h-dvh isolate overflow-hidden bg-[#F8F9FB]">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-[20vw] -top-[20vh] -z-10 h-[60vh] w-[60vw] rounded-full bg-gradient-to-b from-orange-500/10 to-transparent blur-[100px]"
-        />
-
+      <div className="relative isolate flex h-dvh overflow-hidden bg-[var(--canvas)]">
         <AdminSidebar
           adminName={session.user.name}
           adminEmail={session.user.email}
           adminImage={session.user.image}
           hasStagingDb={hasStagingDb}
           isReadOnly={isReadOnly}
+          pendingBeta={pendingBeta}
         />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <AdminTopBar isReadOnly={isReadOnly} pendingBeta={pendingBeta} />
-          <main className="custom-scrollbar min-w-0 flex-1 overflow-y-auto">
-            <div className="min-h-full animate-fade-in">{children}</div>
+          <main className="custom-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto">
+            {children}
           </main>
         </div>
       </div>

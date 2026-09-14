@@ -2,10 +2,9 @@ import type { Metadata } from "next";
 import { signIn } from "@/auth";
 
 export const metadata: Metadata = {
-  title: "Sign In — Plugio Admin",
+  title: "Sign in — Plugio Console",
 };
 
-/** Only allow relative admin paths — blocks open redirects. */
 function safeAdminCallbackUrl(raw: string | undefined): string {
   if (!raw) return "/admin/dashboard";
   if (!raw.startsWith("/") || raw.startsWith("//")) return "/admin/dashboard";
@@ -22,121 +21,93 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
   const error = params.error;
   const callbackUrl = safeAdminCallbackUrl(params.callbackUrl);
-
   const isUnauthorized = error === "AccessDenied" || error === "unauthorized";
 
   return (
-    <div className="min-h-screen bg-[#18181b] flex items-center justify-center p-4">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-orange-500/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[100px]" />
-      </div>
-
-      <div className="relative w-full max-w-sm animate-slide-up">
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-2xl shadow-black/20 overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-br from-[#18181b] to-[#27272a] px-8 py-8 text-center">
-            {/* Logo */}
-            <div className="inline-flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
-                <span className="text-white font-black text-lg leading-none">
-                  P
-                </span>
-              </div>
-              <div className="text-left">
-                <p className="text-white font-bold text-xl leading-none">
-                  Plugio
-                </p>
-                <p className="text-orange-400 text-xs font-semibold tracking-widest uppercase mt-0.5">
-                  Admin
-                </p>
-              </div>
+    <div className="grid min-h-dvh lg:grid-cols-[1.05fr_0.95fr]">
+      <section className="relative hidden overflow-hidden bg-[#0A0908] px-12 py-14 text-white lg:flex lg:flex-col lg:justify-between">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -left-24 top-20 h-80 w-80 rounded-full bg-[#FF6719]/20 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute bottom-0 right-0 h-96 w-96 rounded-full bg-orange-700/10 blur-3xl"
+        />
+        <div className="relative">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF6719]">
+              <span className="text-lg font-black text-white">P</span>
             </div>
-            <h1 className="text-white font-bold text-xl">Internal Panel</h1>
-            <p className="text-zinc-400 text-sm mt-1">
-              Authorized personnel only
-            </p>
+            <div>
+              <p className="text-sm font-semibold tracking-tight">Plugio</p>
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/40">
+                Operations
+              </p>
+            </div>
           </div>
-
-          {/* Body */}
-          <div className="px-8 py-8">
-            {/* Error message */}
-            {isUnauthorized && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                    <svg
-                      className="w-3 h-3 text-red-600"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-red-800 font-semibold text-sm">
-                      Access Denied
-                    </p>
-                    <p className="text-red-600 text-sm mt-0.5">
-                      Your Google account is not authorized to access this
-                      panel.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Sign in form */}
-            <form
-              action={async () => {
-                "use server";
-                await signIn("google", { redirectTo: callbackUrl });
-              }}
-            >
-              <button
-                type="submit"
-                className="w-full flex items-center justify-center gap-3 bg-white border-2 border-zinc-200 hover:border-orange-300 hover:bg-orange-50/50 rounded-xl px-5 py-3.5 text-zinc-700 font-semibold text-sm transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
-              >
-                {/* Google icon */}
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  />
-                </svg>
-                Continue with Google
-              </button>
-            </form>
-
-            <p className="text-center text-zinc-400 text-xs mt-6">
-              Only whitelisted Plugio team members can access this panel.
-            </p>
-          </div>
+          <h1 className="mt-16 max-w-lg text-[34px] font-semibold leading-[1.15] tracking-tight xl:text-[40px]">
+            The desk for who gets in, who pays, and what is live.
+          </h1>
+          <p className="mt-5 max-w-sm text-[15px] leading-relaxed text-white/55">
+            Beta access, trial coupons, Creator/Pro billing, and the audit trail — one console, production-grade.
+          </p>
         </div>
+        <ul className="relative space-y-2 text-[13px] text-white/45">
+          <li>Approve access. Never grant a plan from here.</li>
+          <li>Coupons start trial. Payments keep the workspace.</li>
+          <li>Every operator action is logged.</li>
+        </ul>
+      </section>
 
-        {/* Footer */}
-        <p className="text-center text-zinc-600 text-xs mt-6">
-          © {new Date().getFullYear()} Plugio · Internal Use Only
-        </p>
-      </div>
+      <section className="flex items-center justify-center bg-[var(--canvas)] px-6 py-12">
+        <div className="w-full max-w-[380px]">
+          <div className="mb-8 lg:hidden">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FF6719]">
+                <span className="font-black text-white">P</span>
+              </div>
+              <p className="text-sm font-semibold">Plugio Console</p>
+            </div>
+          </div>
+
+          <p className="admin-kicker">Restricted</p>
+          <h2 className="mt-2 text-[28px] font-semibold tracking-tight text-[var(--ink)]">
+            Sign in to operate
+          </h2>
+          <p className="mt-2 text-[14px] text-[var(--ink-soft)]">
+            Google accounts on the operator list only.
+          </p>
+
+          {isUnauthorized && (
+            <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-medium text-red-800">
+              This Google account is not on the operator list. Sign out and try another.
+            </div>
+          )}
+
+          <form
+            className="mt-8"
+            action={async () => {
+              "use server";
+              await signIn("google", { redirectTo: callbackUrl });
+            }}
+          >
+            <button type="submit" className="admin-btn-ghost h-12 w-full bg-[var(--paper)] text-[14px]">
+              <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden>
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+              </svg>
+              Continue with Google
+            </button>
+          </form>
+
+          <p className="mt-8 text-center text-[12px] text-[var(--ink-mute)]">
+            © {new Date().getFullYear()} Plugio · Internal use
+          </p>
+        </div>
+      </section>
     </div>
   );
 }

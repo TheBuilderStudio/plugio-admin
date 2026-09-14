@@ -5,11 +5,14 @@ import { useRouter } from "next/navigation";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { approveBetaAction, rejectBetaAction } from "@/actions/beta.actions";
 import { useAdminReadOnly } from "@/components/shared/AdminReadOnlyContext";
+import { CopyOutreachScript } from "@/components/beta/CopyOutreachScript";
 
 interface BetaActionsProps {
   userId: string;
   currentStatus: string | null | undefined;
 }
+
+const outreachKey = (userId: string) => `plugio_admin_outreach_${userId}`;
 
 export function BetaActions({ userId, currentStatus }: BetaActionsProps) {
   const isReadOnly = useAdminReadOnly();
@@ -20,21 +23,45 @@ export function BetaActions({ userId, currentStatus }: BetaActionsProps) {
     type: "success" | "error";
     message: string;
   } | null>(null);
+  const [outreach, setOutreach] = useState<{
+    script: string;
+    couponCode?: string | null;
+  } | null>(null);
 
   const isLoading = isPendingApprove || isPendingReject;
 
-  // Auto-clear feedback banner after 4 seconds
   useEffect(() => {
-    if (!result) return;
+    try {
+      const raw = sessionStorage.getItem(outreachKey(userId));
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { script?: string; couponCode?: string | null };
+      if (parsed.script) {
+        setOutreach({ script: parsed.script, couponCode: parsed.couponCode ?? null });
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (!result || outreach) return;
     const timer = setTimeout(() => setResult(null), 4000);
     return () => clearTimeout(timer);
-  }, [result]);
+  }, [result, outreach]);
 
   async function handleApprove() {
     startApprove(async () => {
       const res = await approveBetaAction(userId);
       if (res.success) {
         setResult({ type: "success", message: res.message });
+        if (res.outreachScript) {
+          const next = {
+            script: res.outreachScript,
+            couponCode: res.couponCode ?? null,
+          };
+          setOutreach(next);
+          sessionStorage.setItem(outreachKey(userId), JSON.stringify(next));
+        }
         router.refresh();
       } else {
         setResult({ type: "error", message: res.message });
@@ -54,23 +81,31 @@ export function BetaActions({ userId, currentStatus }: BetaActionsProps) {
     });
   }
 
-  if (currentStatus === "APPROVED" || currentStatus === "REJECTED") {
+  if (currentStatus === "REJECTED") {
     return (
-      <div className="p-3 bg-zinc-50 rounded-xl text-center">
-        <p className="text-xs text-zinc-500 font-medium">
-          This application has already been{" "}
-          {currentStatus === "APPROVED" ? "approved" : "rejected"}.
+      <p className="text-center text-[13px] font-medium text-[var(--ink-soft)]">
+        This application has already been declined.
+      </p>
+    );
+  }
+
+  if (currentStatus === "APPROVED" && !isPendingApprove) {
+    return (
+      <div className="space-y-3">
+        <p className="text-center text-[13px] font-medium text-[var(--ink-soft)]">
+          Access granted — they still need a coupon to start trial.
         </p>
+        {outreach ? (
+          <CopyOutreachScript script={outreach.script} couponCode={outreach.couponCode} />
+        ) : null}
       </div>
     );
   }
 
   if (isReadOnly) {
     return (
-      <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-center">
-        <p className="text-xs text-blue-600 font-medium">
-          Admin Panel is in Read-Only Mode. Modifications disabled.
-        </p>
+      <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-center text-[13px] font-medium text-sky-800">
+        Read-only mode — approve and reject are blocked.
       </div>
     );
   }
@@ -79,41 +114,38 @@ export function BetaActions({ userId, currentStatus }: BetaActionsProps) {
     <div className="space-y-3">
       {result && (
         <div
-          className={`p-3 rounded-xl text-sm font-medium ${
+          className={`rounded-xl border px-3 py-2.5 text-[13px] font-medium ${
             result.type === "success"
-              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-              : "bg-red-50 text-red-700 border border-red-200"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border-red-200 bg-red-50 text-red-800"
           }`}
         >
           {result.message}
         </div>
       )}
 
+      {outreach ? (
+        <CopyOutreachScript script={outreach.script} couponCode={outreach.couponCode} />
+      ) : null}
+
       <div className="flex gap-2">
         <button
+          type="button"
           onClick={handleApprove}
           disabled={isLoading}
-          className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-300 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-[13px] font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
         >
-          {isPendingApprove ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <CheckCircle className="w-4 h-4" />
-          )}
-          Approve
+          {isPendingApprove ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+          Approve access
         </button>
-
         <button
+          type="button"
           onClick={handleReject}
           disabled={isLoading}
-          className="flex-1 flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
         >
-          {isPendingReject ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <XCircle className="w-4 h-4" />
-          )}
-          Reject
+          {isPendingReject ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+          Decline
         </button>
       </div>
     </div>

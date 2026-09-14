@@ -1,27 +1,23 @@
 import Link from "next/link";
-import { SearchX } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Page Not Found — Plugio Admin",
+  title: "Not found — Plugio Console",
 };
 
 export default function NotFoundPage() {
   return (
-    <div className="min-h-screen bg-[#18181b] flex items-center justify-center p-4">
-      <div className="text-center">
-        <div className="inline-flex w-16 h-16 rounded-2xl bg-zinc-800/80 border border-zinc-700/50 items-center justify-center mb-6">
-          <SearchX className="w-8 h-8 text-zinc-400" strokeWidth={1.5} />
-        </div>
-        <h1 className="text-white font-bold text-2xl mb-2">404 - Not Found</h1>
-        <p className="text-zinc-400 text-sm max-w-xs mx-auto mb-8">
-          The page you are looking for doesn't exist or has been moved.
+    <div className="flex min-h-dvh items-center justify-center bg-[var(--canvas)] px-6">
+      <div className="max-w-sm text-center">
+        <p className="admin-kicker">404</p>
+        <h1 className="mt-2 text-[28px] font-semibold tracking-tight text-[var(--ink)]">
+          This screen is not in the console
+        </h1>
+        <p className="mt-3 text-[14px] text-[var(--ink-soft)]">
+          The route does not exist. Return to Command.
         </p>
-        <Link
-          href="/admin/dashboard"
-          className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors"
-        >
-          Return to Dashboard
+        <Link href="/admin/dashboard" className="admin-btn-primary mt-8 inline-flex">
+          Back to Command
         </Link>
       </div>
     </div>

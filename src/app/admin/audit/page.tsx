@@ -1,121 +1,52 @@
-import { Shield, Clock, Fingerprint, Activity } from "lucide-react";
+import { Shield } from "lucide-react";
 import { requireAdmin } from "@/lib/security";
 import { readRecentAuditLogs } from "@/lib/logger";
 import { formatDateTime } from "@/lib/utils";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { AdminPage, AdminCard } from "@/components/ui/page-shell";
 
 export default async function AuditLogsPage() {
   await requireAdmin();
-
   const logs = await readRecentAuditLogs(500);
 
   return (
-    <div className="p-6 md:p-8 max-w-[1200px] mx-auto min-h-screen space-y-6 lg:space-y-8">
-      <div className="relative overflow-hidden rounded-xl p-8 bg-white border border-neutral-200 shadow-sm">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-red-50 blur-3xl rounded-full pointer-events-none -translate-y-1/2 translate-x-1/2" />
-        <div className="relative z-10 space-y-2">
-          <h1 className="text-3xl font-extrabold text-[#09090B] tracking-tight flex items-center gap-3">
-            Security Audit
-          </h1>
-          <p className="text-neutral-500 font-medium">
-            Recent administrative control actions (local JSONL log). Use this to
-            verify who changed coupons, grants, and beta access.
-          </p>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm overflow-hidden flex flex-col">
+    <AdminPage>
+      <AdminCard padded={false}>
         {logs.length === 0 ? (
-          <div className="p-12 flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center mb-4">
-              <Shield className="w-8 h-8 text-neutral-300" />
-            </div>
-            <h3 className="text-base font-bold text-[#09090B] mb-1">
-              No audit logs yet
-            </h3>
-            <p className="text-neutral-500 text-sm max-w-sm">
-              Critical events and admin actions will appear here automatically.
-            </p>
-          </div>
+          <EmptyState icon={Shield} title="No audit events yet" description="Approve, reject, and coupon writes appear here automatically." />
         ) : (
-          <div className="overflow-x-auto min-h-[500px]">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-[#FAFAFA] border-b border-neutral-200 text-[#09090B] font-bold text-xs uppercase tracking-widest">
+          <div className="overflow-x-auto">
+            <table className="admin-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-4">Action</th>
-                  <th className="px-6 py-4">Admin</th>
-                  <th className="px-6 py-4">Target</th>
-                  <th className="px-6 py-4">Details</th>
-                  <th className="px-6 py-4">Timestamp</th>
+                  <th>Action</th>
+                  <th>Operator</th>
+                  <th>Target</th>
+                  <th>Details</th>
+                  <th>When</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody>
                 {logs.map((log) => (
-                  <tr
-                    key={`${log.timestamp}-${log.adminEmail}-${log.action}-${log.targetUserId ?? ""}-${log.details ?? ""}`}
-                    className="hover:bg-neutral-50/50 transition-colors align-top"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        {log.action.includes("APPROVE") ||
-                        log.action.includes("GRANT") ? (
-                          <div className="w-6 h-6 rounded-md bg-green-50 flex items-center justify-center flex-shrink-0">
-                            <Activity className="w-3 h-3 text-green-600" />
-                          </div>
-                        ) : log.action.includes("REJECT") ||
-                          log.action.includes("REVOKE") ? (
-                          <div className="w-6 h-6 rounded-md bg-red-50 flex items-center justify-center flex-shrink-0">
-                            <Shield className="w-3 h-3 text-red-600" />
-                          </div>
-                        ) : (
-                          <div className="w-6 h-6 rounded-md bg-blue-50 flex items-center justify-center flex-shrink-0">
-                            <Fingerprint className="w-3 h-3 text-blue-600" />
-                          </div>
-                        )}
-                        <span className="font-semibold text-[#09090B]">
-                          {log.action}
-                        </span>
-                      </div>
+                  <tr key={`${log.timestamp}-${log.adminEmail}-${log.action}-${log.targetUserId ?? ""}-${log.details ?? ""}`}>
+                    <td className="whitespace-nowrap font-semibold">{log.action.replaceAll("_", " ")}</td>
+                    <td className="whitespace-nowrap text-[var(--ink-soft)]">{log.adminEmail}</td>
+                    <td>
+                      {log.targetEmail ? (
+                        <span className="rounded-md bg-[#F7F4EE] px-2 py-0.5 text-[12px]">{log.targetEmail}</span>
+                      ) : (
+                        <span className="text-[var(--ink-mute)]">—</span>
+                      )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="font-semibold text-neutral-700">
-                        {log.adminEmail}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1">
-                        {log.targetEmail && (
-                          <span className="text-neutral-500 font-medium bg-neutral-100 px-2 py-0.5 rounded-md text-xs w-fit">
-                            {log.targetEmail}
-                          </span>
-                        )}
-                        {log.targetUserId && (
-                          <span className="text-neutral-400 text-xs font-mono">
-                            {log.targetUserId}
-                          </span>
-                        )}
-                        {!log.targetEmail && !log.targetUserId && (
-                          <span className="text-neutral-300 text-xs">—</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 max-w-[320px]">
-                      <p className="text-xs text-neutral-600 font-medium whitespace-normal break-words">
-                        {log.details?.trim() || "—"}
-                      </p>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2 text-neutral-500 font-medium text-xs">
-                        <Clock className="w-3.5 h-3.5" />
-                        {formatDateTime(log.timestamp)}
-                      </div>
-                    </td>
+                    <td className="max-w-[280px] text-[12.5px] text-[var(--ink-soft)]">{log.details?.trim() || "—"}</td>
+                    <td className="whitespace-nowrap text-[12px] text-[var(--ink-soft)]">{formatDateTime(log.timestamp)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-      </div>
-    </div>
+      </AdminCard>
+    </AdminPage>
   );
 }

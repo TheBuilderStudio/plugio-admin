@@ -48,12 +48,6 @@ export interface DbUser {
 }
 
 export type PlanIdValue = "TRIAL" | "CREATOR" | "PRO";
-export type GrantPlanId = "CREATOR" | "PRO";
-export type GrantStatus = "ACTIVE" | "REVOKED" | "EXPIRED";
-export type GrantDurationDays = 30 | 60 | 90;
-
-/** Stored duration may grow beyond the original 30/60/90 after extends. */
-export type GrantDurationStored = number;
 
 /** Mirrors the plugio_db `subscriptions` table */
 export interface DbSubscription {
@@ -78,6 +72,8 @@ export interface TrialCouponRow {
   id: string;
   code: string;
   max_redemptions: number | null;
+  percent_off: number;
+  expires_at: Date;
   active: boolean;
   note: string | null;
   created_by: string | null;
@@ -86,32 +82,31 @@ export interface TrialCouponRow {
   redeemed_count: number;
 }
 
-/** Mirrors the plugio_db `admin_access_grants` table */
-export interface AdminAccessGrantRow {
+/** Mirrors `plan_coupons` (+ redeemed_count from coupon_usage) */
+export interface PlanCouponRow {
   id: string;
-  user_id: string;
-  plan_id: GrantPlanId;
-  starts_at: Date;
-  ends_at: Date;
-  status: GrantStatus;
-  duration_days: GrantDurationStored;
-  reason: string | null;
-  notes: string | null;
-  granted_by_admin_email: string;
-  previous_effective_plan: PlanIdValue | null;
-  revoked_at: Date | null;
-  revoked_by_admin_email: string | null;
+  code: string;
+  plan: "CREATOR" | "PRO";
+  percent_off: number;
+  max_redemptions: number | null;
+  expires_at: Date;
+  active: boolean;
+  note: string | null;
+  created_by: string | null;
   created_at: Date;
   updated_at: Date;
+  redeemed_count: number;
 }
 
-/** Recent trial coupon redemption for control-plane visibility */
+/** Recent coupon redemption for control-plane visibility */
 export interface CouponRedemptionRow {
   id: string;
   user_id: string;
   user_email: string | null;
   user_name: string | null;
   coupon_code: string;
+  kind: "TRIAL" | "CREATOR" | "PRO";
+  payable_cents: number | null;
   redeemed_at: Date;
 }
 
@@ -171,9 +166,8 @@ export interface BusinessOverview {
   plans: {
     active_creator: number;
     active_pro: number;
-    trialing: number;
-    complimentary_grants: number;
-    expired: number;
+      trialing: number;
+      expired: number;
     none: number;
   };
   coupons: {
@@ -205,22 +199,20 @@ export interface BusinessOverview {
   attention: {
     pending_beta: number;
     payment_failures_7d: number;
-    grants_expiring_7d: number;
     sync_failed: number;
     content_failed: number;
   };
 }
 
-/** Complimentary grant ending soon (dashboard attention list) */
-export interface ExpiringGrantRow {
-  id: string;
-  user_id: string;
-  user_email: string | null;
-  user_name: string | null;
-  plan_id: GrantPlanId;
-  ends_at: Date;
-  duration_days: number;
-}
+export type AdminUserListFilter =
+  | "ALL"
+  | "SUBSCRIBED"
+  | "FREE"
+  | "PAID"
+  | "TRIALING"
+  | "APPROVED_NO_TRIAL"
+  | "TRIAL_NO_PUBLISH"
+  | "TRIAL_ENDING";
 
 /** Row in the admin users table */
 export interface AdminUserRow {
@@ -244,9 +236,9 @@ export interface AdminUserDetail extends DbUser {
   plan_started_at: Date | null;
   pro_period_end_at: Date | null;
   payment_last4: string | null;
-  active_grant?: AdminAccessGrantRow | null;
   social_accounts: DbSocialAccount[];
   content_count: number;
+  published_count: number;
 }
 
 /** Row in the beta requests table */
@@ -280,7 +272,6 @@ export interface RecentActivityItem {
 export interface AdminOverviewPayload {
   metrics: BusinessOverview;
   activity: RecentActivityItem[];
-  expiringGrants: ExpiringGrantRow[];
   /** ISO timestamp when this cached payload was built */
   generatedAt: string;
 }
@@ -307,12 +298,17 @@ export interface AdminAuditLog {
     | "COUPON_UPDATE"
     | "COUPON_ACTIVATE"
     | "COUPON_DEACTIVATE"
+    | "PLAN_COUPON_CREATE"
+    | "PLAN_COUPON_UPDATE"
+    | "PLAN_COUPON_ACTIVATE"
+    | "PLAN_COUPON_DEACTIVATE"
+    | "PLAN_CATALOG_UPDATE"
+    | "BILLING_REVOKE"
+    // Legacy — kept for reading old audit logs; do not emit new entries
     | "BILLING_GRANT"
     | "BILLING_GRANT_EXTEND"
     | "BILLING_GRANT_CHANGE"
     | "BILLING_GRANT_REVOKE"
-    | "BILLING_REVOKE"
-    // Legacy — kept for reading old audit logs; do not emit new entries
     | "BILLING_TRIAL_GRANT"
     | "BILLING_LIFETIME_GRANT";
   adminEmail: string;
@@ -327,4 +323,6 @@ export interface ActionResult {
   success: boolean;
   message: string;
   error?: string;
+  outreachScript?: string;
+  couponCode?: string | null;
 }

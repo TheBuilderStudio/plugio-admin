@@ -54,23 +54,33 @@ export const SocialPlatform = {
 } as const;
 
 /**
- * Paid catalog — mirrors backend BillingPlanConfig (USD).
- * Used for overview revenue / MRR estimates and pricing display.
+ * Paid catalog defaults — live values live in billing_plan_settings (Admin → Plans).
+ * Used as fallback when the table is missing, and for typed helpers.
  */
-export const PLAN_CATALOG_USD = {
+export type AdminPlanCatalog = {
+  currency: "USD";
+  trialDays: number;
+  trialPrice: number;
+  CREATOR: { monthly: number; twoMonths: number; threeMonths: number };
+  PRO: { monthly: number; twoMonths: number; threeMonths: number };
+  channelsPerPlatform: { TRIAL: number; CREATOR: number; PRO: number };
+};
+
+export const PLAN_CATALOG_USD: AdminPlanCatalog = {
   currency: "USD",
   trialDays: 7,
-  trialPrice: 0,
-  CREATOR: { monthly: 9, twoMonths: 16, threeMonths: 21 },
-  PRO: { monthly: 15, twoMonths: 28, threeMonths: 39 },
-  channelsPerPlatform: { TRIAL: 1, CREATOR: 2, PRO: 3 },
-} as const;
+  trialPrice: 7,
+  CREATOR: { monthly: 15, twoMonths: 27, threeMonths: 39 },
+  PRO: { monthly: 20, twoMonths: 36, threeMonths: 51 },
+  channelsPerPlatform: { TRIAL: 2, CREATOR: 3, PRO: 4 },
+};
 
 export function catalogPeriodPriceUsd(
   plan: "CREATOR" | "PRO",
-  interval: string | null | undefined
+  interval: string | null | undefined,
+  catalog: AdminPlanCatalog = PLAN_CATALOG_USD
 ): number {
-  const prices = PLAN_CATALOG_USD[plan];
+  const prices = catalog[plan];
   const key = (interval ?? "MONTHLY").toUpperCase();
   if (key === "TWO_MONTH" || key === "TWO_MONTHS") return prices.twoMonths;
   if (key === "THREE_MONTH" || key === "THREE_MONTHS") return prices.threeMonths;
@@ -81,14 +91,28 @@ export function catalogPeriodPriceUsd(
 /** Normalize a prepaid period price into approximate monthly revenue. */
 export function toMonthlyUsd(
   plan: "CREATOR" | "PRO",
-  interval: string | null | undefined
+  interval: string | null | undefined,
+  catalog: AdminPlanCatalog = PLAN_CATALOG_USD
 ): number {
-  const periodPrice = catalogPeriodPriceUsd(plan, interval);
+  const periodPrice = catalogPeriodPriceUsd(plan, interval, catalog);
   const key = (interval ?? "MONTHLY").toUpperCase();
   if (key === "TWO_MONTH" || key === "TWO_MONTHS") return periodPrice / 2;
   if (key === "THREE_MONTH" || key === "THREE_MONTHS") return periodPrice / 3;
   if (key === "YEARLY") return periodPrice / 12;
   return periodPrice;
+}
+
+/** Percent saved vs paying monthly for the same length. Null when there is no cut. */
+export function termSavePercent(
+  monthly: number,
+  termPrice: number,
+  months: number
+): number | null {
+  if (!Number.isFinite(monthly) || !Number.isFinite(termPrice) || months < 2) return null;
+  const was = monthly * months;
+  if (!(was > 0) || termPrice >= was - 1e-9) return null;
+  const pct = Math.round(((was - termPrice) / was) * 100);
+  return pct > 0 ? pct : null;
 }
 
 export function formatUsd(amount: number): string {
@@ -101,4 +125,12 @@ export function formatUsd(amount: number): string {
     minimumFractionDigits: hasCents ? 2 : 0,
     maximumFractionDigits: 2,
   }).format(rounded);
+}
+
+export function channelsLine(perPlatform: number): string {
+  const n = Number.isInteger(perPlatform) ? perPlatform : 0;
+  const yt = n === 1 ? "1 YouTube channel" : `${n} YouTube channels`;
+  const ig = n === 1 ? "1 Instagram page" : `${n} Instagram pages`;
+  const fb = n === 1 ? "1 Facebook page" : `${n} Facebook pages`;
+  return `${yt} + ${ig} + ${fb}`;
 }

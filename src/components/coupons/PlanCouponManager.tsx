@@ -13,37 +13,41 @@ import {
   X,
 } from "lucide-react";
 import {
-  createCouponAction,
-  setCouponActiveAction,
-  updateCouponAction,
+  createPlanCouponAction,
+  setPlanCouponActiveAction,
+  updatePlanCouponAction,
 } from "@/actions/coupon.actions";
 import { formatDateTime } from "@/lib/utils";
-import { percentWarning, trialPricePreviewLine, MAX_PERCENT_OFF, PERCENT_RANGE_HINT } from "@/lib/plan-coupon-preview";
-import type { TrialCouponRow } from "@/types";
+import {
+  percentWarning,
+  planPricePreviewLines,
+  MAX_PERCENT_OFF,
+  PERCENT_RANGE_HINT,
+} from "@/lib/plan-coupon-preview";
+import type { PlanCouponRow } from "@/types";
 import { useAdminReadOnly } from "@/components/shared/AdminReadOnlyContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import type { AdminPlanCatalog } from "@/constants";
-import { formatUsd } from "@/constants";
 
-interface CouponManagerProps {
-  coupons: TrialCouponRow[];
+interface PlanCouponManagerProps {
+  coupons: PlanCouponRow[];
+  schemaAvailable: boolean;
   catalog: AdminPlanCatalog;
 }
 
 function defaultExpiryLocal(): string {
   const d = new Date();
-  d.setFullYear(d.getFullYear() + 1);
+  d.setDate(d.getDate() + 30);
   d.setHours(23, 59, 0, 0);
   return toDatetimeLocalValue(d);
 }
 
 function toDatetimeLocalValue(d: Date): string {
-  if (Number.isNaN(d.getTime())) return defaultExpiryLocal();
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function CouponManager({ coupons, catalog }: CouponManagerProps) {
+export function PlanCouponManager({ coupons, schemaAvailable, catalog }: PlanCouponManagerProps) {
   const isReadOnly = useAdminReadOnly();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -53,7 +57,8 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
   } | null>(null);
 
   const [code, setCode] = useState("");
-  const [percent, setPercent] = useState("90");
+  const [plan, setPlan] = useState<"CREATOR" | "PRO">("CREATOR");
+  const [percent, setPercent] = useState("40");
   const [maxRedemptions, setMaxRedemptions] = useState("");
   const [expiresAt, setExpiresAt] = useState(defaultExpiryLocal);
   const [note, setNote] = useState("");
@@ -72,9 +77,9 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
 
   const percentOff = Number(percent);
   const warning = percentWarning(percentOff);
-  const previewLine = useMemo(
-    () => (Number.isInteger(percentOff) ? trialPricePreviewLine(percentOff, catalog) : ""),
-    [percentOff, catalog]
+  const previewLines = useMemo(
+    () => (Number.isInteger(percentOff) ? planPricePreviewLines(plan, percentOff, catalog) : []),
+    [plan, percentOff, catalog]
   );
 
   function runAction(fn: () => Promise<{ success: boolean; message: string }>) {
@@ -88,7 +93,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
         setCode("");
         setMaxRedemptions("");
         setNote("");
-        setPercent("90");
+        setPercent("40");
         setExpiresAt(defaultExpiryLocal());
         setEditingId(null);
         router.refresh();
@@ -99,17 +104,18 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
   function handleCreate(e: FormEvent) {
     e.preventDefault();
     runAction(() =>
-      createCouponAction({
+      createPlanCouponAction({
         code,
-        maxRedemptions: maxRedemptions.trim() ? Number(maxRedemptions) : null,
+        plan,
         percentOff: Number(percent),
+        maxRedemptions: maxRedemptions.trim() ? Number(maxRedemptions) : null,
         expiresAt,
         note: note.trim() || null,
       })
     );
   }
 
-  function startEdit(coupon: TrialCouponRow) {
+  function startEdit(coupon: PlanCouponRow) {
     setEditingId(coupon.id);
     setEditMax(coupon.max_redemptions === null ? "" : String(coupon.max_redemptions));
     setEditNote(coupon.note ?? "");
@@ -119,7 +125,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
 
   function handleSaveEdit(id: string) {
     runAction(() =>
-      updateCouponAction({
+      updatePlanCouponAction({
         id,
         maxRedemptions: editMax.trim() ? Number(editMax) : null,
         note: editNote.trim() || null,
@@ -133,7 +139,15 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
     const next = !currentlyActive;
     const label = next ? "activate" : "deactivate";
     if (!confirm(`Are you sure you want to ${label} this coupon?`)) return;
-    runAction(() => setCouponActiveAction(id, next));
+    runAction(() => setPlanCouponActiveAction(id, next));
+  }
+
+  if (!schemaAvailable) {
+    return (
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-medium text-amber-950">
+        Paid-plan coupons need backend migration V41. Trial coupons still work.
+      </div>
+    );
   }
 
   return (
@@ -152,10 +166,10 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
 
       <section className="admin-card p-5 sm:p-6">
         <h2 className="mb-1 text-[15px] font-semibold tracking-tight text-[var(--ink)]">
-          Create trial code
+          Create Creator / Pro code
         </h2>
         <p className="mb-4 text-[12.5px] text-[var(--ink-soft)]">
-          Percent off the {formatUsd(catalog.trialPrice)} / {catalog.trialDays}-day list. Maximum 90% — every trial still pays through Razorpay.
+          Percent off that checkout total. Maximum 90% — every term still pays through Razorpay.
         </p>
         {isReadOnly ? (
           <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-center text-[13px] font-medium text-sky-800">
@@ -163,7 +177,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
           </div>
         ) : (
           <form onSubmit={handleCreate} className="space-y-3">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-6">
               <div>
                 <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--ink-mute)]">
                   Code
@@ -171,11 +185,24 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                 <input
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="PLUGIO7"
+                  placeholder="SAVE40"
                   required
                   maxLength={64}
                   className="admin-input font-mono font-semibold uppercase"
                 />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--ink-mute)]">
+                  Plan
+                </label>
+                <select
+                  value={plan}
+                  onChange={(e) => setPlan(e.target.value === "PRO" ? "PRO" : "CREATOR")}
+                  className="admin-input"
+                >
+                  <option value="CREATOR">Creator</option>
+                  <option value="PRO">Pro</option>
+                </select>
               </div>
               <div>
                 <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--ink-mute)]">
@@ -242,9 +269,11 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                 {warning.message}
               </p>
             ) : null}
-            {previewLine ? (
+            {previewLines.length > 0 ? (
               <div className="rounded-xl border border-[var(--line)] bg-[#F7F4EE] px-3 py-2 font-mono text-[12px] leading-relaxed text-[var(--ink)]">
-                {previewLine}
+                {previewLines.map((line) => (
+                  <div key={line}>{line}</div>
+                ))}
               </div>
             ) : (
               <p className="text-[12.5px] text-[var(--ink-soft)]">
@@ -269,8 +298,8 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
         {coupons.length === 0 ? (
           <EmptyState
             icon={Ticket}
-            title="No coupons yet"
-            description="Create a trial coupon so approved creators can pay the discounted $7 checkout and start 7 days of Creator."
+            title="No paid-plan coupons yet"
+            description="Create a Creator or Pro percent-off code. Checkout still goes through Razorpay."
           />
         ) : (
           <div className="overflow-x-auto">
@@ -278,12 +307,12 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
               <thead>
                 <tr>
                   <th>Code</th>
+                  <th>Plan</th>
                   <th>%</th>
                   <th>Usage</th>
                   <th>Expires</th>
                   <th>Status</th>
                   <th>Note</th>
-                  <th>Created</th>
                   <th className="text-right"> </th>
                 </tr>
               </thead>
@@ -296,6 +325,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                         <p className="mt-0.5 text-[12px] text-[var(--ink-mute)]">by {coupon.created_by}</p>
                       ) : null}
                     </td>
+                    <td className="font-semibold">{coupon.plan === "PRO" ? "Pro" : "Creator"}</td>
                     <td>
                       {editingId === coupon.id ? (
                         <input
@@ -358,9 +388,6 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                       ) : (
                         <span className="block truncate text-[var(--ink-soft)]">{coupon.note || "—"}</span>
                       )}
-                    </td>
-                    <td className="whitespace-nowrap text-[var(--ink-soft)]">
-                      {formatDateTime(coupon.created_at)}
                     </td>
                     <td>
                       {isReadOnly ? (

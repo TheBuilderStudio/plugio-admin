@@ -32,62 +32,35 @@ export function Pagination({
     return `${baseUrl}?${params.toString()}`;
   }
 
-  // Build page numbers to show (always show 5 around current)
   const pages: (number | "...")[] = [];
   const delta = 2;
-
   for (let i = 1; i <= totalPages; i++) {
-    if (
-      i === 1 ||
-      i === totalPages ||
-      (i >= currentPage - delta && i <= currentPage + delta)
-    ) {
+    if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
       pages.push(i);
-    } else if (
-      i === currentPage - delta - 1 ||
-      i === currentPage + delta + 1
-    ) {
+    } else if (i === currentPage - delta - 1 || i === currentPage + delta + 1) {
       pages.push("...");
     }
   }
-
-  // Deduplicate
-  const uniquePages = pages.filter(
-    (p, idx) => p !== "..." || pages[idx - 1] !== "..."
-  );
+  const uniquePages = pages.filter((p, idx) => p !== "..." || pages[idx - 1] !== "...");
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-t border-zinc-100">
-      <p className="text-xs text-zinc-500">
-        Showing{" "}
-        <span className="font-semibold text-zinc-700">
-          {start}–{end}
-        </span>{" "}
-        of <span className="font-semibold text-zinc-700">{total}</span> results
+    <div className="flex items-center justify-between px-5 py-3.5">
+      <p className="text-[12.5px] text-[var(--ink-soft)]">
+        {start}–{end} of <span className="font-semibold text-[var(--ink)]">{total}</span>
       </p>
-
       <div className="flex items-center gap-1">
-        {/* Prev */}
         {currentPage > 1 ? (
-          <Link
-            href={buildUrl(currentPage - 1)}
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
+          <Link href={buildUrl(currentPage - 1)} className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--ink-soft)] hover:bg-[#F7F4EE]">
+            <ChevronLeft className="h-4 w-4" />
           </Link>
         ) : (
-          <span className="flex items-center justify-center w-8 h-8 rounded-lg text-zinc-300 cursor-not-allowed">
-            <ChevronLeft className="w-4 h-4" />
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--ink-mute)] opacity-40">
+            <ChevronLeft className="h-4 w-4" />
           </span>
         )}
-
-        {/* Pages */}
         {uniquePages.map((page, idx) =>
           page === "..." ? (
-            <span
-              key={`ellipsis-${idx}`}
-              className="flex items-center justify-center w-8 h-8 text-zinc-400 text-sm"
-            >
+            <span key={`ellipsis-${idx}`} className="flex h-8 w-8 items-center justify-center text-[13px] text-[var(--ink-mute)]">
               …
             </span>
           ) : (
@@ -95,28 +68,23 @@ export function Pagination({
               key={page}
               href={buildUrl(page)}
               className={cn(
-                "flex items-center justify-center w-8 h-8 rounded-lg text-sm font-medium transition-colors",
+                "flex h-8 w-8 items-center justify-center rounded-lg text-[13px] font-semibold transition",
                 page === currentPage
-                  ? "bg-orange-500 text-white font-semibold"
-                  : "text-zinc-600 hover:bg-zinc-100"
+                  ? "bg-[#FF6719] text-white"
+                  : "text-[var(--ink-soft)] hover:bg-[#F7F4EE]"
               )}
             >
               {page}
             </Link>
           )
         )}
-
-        {/* Next */}
         {currentPage < totalPages ? (
-          <Link
-            href={buildUrl(currentPage + 1)}
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
-          >
-            <ChevronRight className="w-4 h-4" />
+          <Link href={buildUrl(currentPage + 1)} className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--ink-soft)] hover:bg-[#F7F4EE]">
+            <ChevronRight className="h-4 w-4" />
           </Link>
         ) : (
-          <span className="flex items-center justify-center w-8 h-8 rounded-lg text-zinc-300 cursor-not-allowed">
-            <ChevronRight className="w-4 h-4" />
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--ink-mute)] opacity-40">
+            <ChevronRight className="h-4 w-4" />
           </span>
         )}
       </div>

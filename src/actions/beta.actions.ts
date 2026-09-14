@@ -20,9 +20,15 @@ import {
   approveBetaUser,
   rejectBetaUser,
   getUserEmailById,
+  listTrialCoupons,
+  getBillingPlanSettings,
 } from "@/lib/db/queries";
 import { invalidateAdminOverview } from "@/lib/db/admin-overview";
 import { logAdminAction } from "@/lib/logger";
+import {
+  buildCreatorOutreachScript,
+  pickSuggestedTrialCoupon,
+} from "@/lib/beta-outreach";
 import type { ActionResult } from "@/types";
 
 /**
@@ -54,6 +60,15 @@ export async function approveBetaAction(
     // 4. Perform the database update
     await approveBetaUser(validUserId);
 
+    const coupons = await listTrialCoupons();
+    const suggested = pickSuggestedTrialCoupon(coupons);
+    const catalog = await getBillingPlanSettings().catch(() => undefined);
+    const outreachScript = buildCreatorOutreachScript({
+      name: targetUser.name,
+      couponCode: suggested?.code ?? null,
+      catalog,
+    });
+
     // 5. Log the action
     logAdminAction({
       action: "BETA_APPROVE",
@@ -72,6 +87,8 @@ export async function approveBetaAction(
     return {
       success: true,
       message: `Beta access approved for ${targetUser.name ?? targetUser.email}`,
+      outreachScript,
+      couponCode: suggested?.code ?? null,
     };
   } catch (error) {
     const message =
