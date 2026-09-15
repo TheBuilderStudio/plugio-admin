@@ -24,9 +24,14 @@ import {
   MAX_PERCENT_OFF,
   PERCENT_RANGE_HINT,
 } from "@/lib/plan-coupon-preview";
+import {
+  datetimeLocalToIso,
+  toDatetimeLocalValue,
+} from "@/lib/coupon-expiry";
 import type { PlanCouponRow } from "@/types";
 import { useAdminReadOnly } from "@/components/shared/AdminReadOnlyContext";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { CouponStatusBadge } from "@/components/coupons/CouponStatusBadge";
 import type { AdminPlanCatalog } from "@/constants";
 
 interface PlanCouponManagerProps {
@@ -40,11 +45,6 @@ function defaultExpiryLocal(): string {
   d.setDate(d.getDate() + 30);
   d.setHours(23, 59, 0, 0);
   return toDatetimeLocalValue(d);
-}
-
-function toDatetimeLocalValue(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export function PlanCouponManager({ coupons, schemaAvailable, catalog }: PlanCouponManagerProps) {
@@ -109,7 +109,7 @@ export function PlanCouponManager({ coupons, schemaAvailable, catalog }: PlanCou
         plan,
         percentOff: Number(percent),
         maxRedemptions: maxRedemptions.trim() ? Number(maxRedemptions) : null,
-        expiresAt,
+        expiresAt: datetimeLocalToIso(expiresAt),
         note: note.trim() || null,
       })
     );
@@ -120,7 +120,7 @@ export function PlanCouponManager({ coupons, schemaAvailable, catalog }: PlanCou
     setEditMax(coupon.max_redemptions === null ? "" : String(coupon.max_redemptions));
     setEditNote(coupon.note ?? "");
     setEditPercent(String(coupon.percent_off));
-    setEditExpires(toDatetimeLocalValue(new Date(coupon.expires_at)));
+    setEditExpires(toDatetimeLocalValue(coupon.expires_at) || defaultExpiryLocal());
   }
 
   function handleSaveEdit(id: string) {
@@ -130,7 +130,7 @@ export function PlanCouponManager({ coupons, schemaAvailable, catalog }: PlanCou
         maxRedemptions: editMax.trim() ? Number(editMax) : null,
         note: editNote.trim() || null,
         percentOff: Number(editPercent),
-        expiresAt: editExpires,
+        expiresAt: datetimeLocalToIso(editExpires),
       })
     );
   }
@@ -373,9 +373,7 @@ export function PlanCouponManager({ coupons, schemaAvailable, catalog }: PlanCou
                       )}
                     </td>
                     <td>
-                      <span className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${coupon.active ? "badge-approved" : "badge-none"}`}>
-                        {coupon.active ? "Active" : "Inactive"}
-                      </span>
+                      <CouponStatusBadge active={coupon.active} expiresAt={coupon.expires_at} />
                     </td>
                     <td className="max-w-[220px]">
                       {editingId === coupon.id ? (

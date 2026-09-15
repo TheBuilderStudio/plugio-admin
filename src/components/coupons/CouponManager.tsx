@@ -19,9 +19,14 @@ import {
 } from "@/actions/coupon.actions";
 import { formatDateTime } from "@/lib/utils";
 import { percentWarning, trialPricePreviewLine, MAX_PERCENT_OFF, PERCENT_RANGE_HINT } from "@/lib/plan-coupon-preview";
+import {
+  datetimeLocalToIso,
+  toDatetimeLocalValue,
+} from "@/lib/coupon-expiry";
 import type { TrialCouponRow } from "@/types";
 import { useAdminReadOnly } from "@/components/shared/AdminReadOnlyContext";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { CouponStatusBadge } from "@/components/coupons/CouponStatusBadge";
 import type { AdminPlanCatalog } from "@/constants";
 import { formatUsd } from "@/constants";
 
@@ -35,12 +40,6 @@ function defaultExpiryLocal(): string {
   d.setFullYear(d.getFullYear() + 1);
   d.setHours(23, 59, 0, 0);
   return toDatetimeLocalValue(d);
-}
-
-function toDatetimeLocalValue(d: Date): string {
-  if (Number.isNaN(d.getTime())) return defaultExpiryLocal();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export function CouponManager({ coupons, catalog }: CouponManagerProps) {
@@ -103,7 +102,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
         code,
         maxRedemptions: maxRedemptions.trim() ? Number(maxRedemptions) : null,
         percentOff: Number(percent),
-        expiresAt,
+        expiresAt: datetimeLocalToIso(expiresAt),
         note: note.trim() || null,
       })
     );
@@ -114,7 +113,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
     setEditMax(coupon.max_redemptions === null ? "" : String(coupon.max_redemptions));
     setEditNote(coupon.note ?? "");
     setEditPercent(String(coupon.percent_off));
-    setEditExpires(toDatetimeLocalValue(new Date(coupon.expires_at)));
+    setEditExpires(toDatetimeLocalValue(coupon.expires_at) || defaultExpiryLocal());
   }
 
   function handleSaveEdit(id: string) {
@@ -124,7 +123,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
         maxRedemptions: editMax.trim() ? Number(editMax) : null,
         note: editNote.trim() || null,
         percentOff: Number(editPercent),
-        expiresAt: editExpires,
+        expiresAt: datetimeLocalToIso(editExpires),
       })
     );
   }
@@ -343,9 +342,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                       )}
                     </td>
                     <td>
-                      <span className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${coupon.active ? "badge-approved" : "badge-none"}`}>
-                        {coupon.active ? "Active" : "Inactive"}
-                      </span>
+                      <CouponStatusBadge active={coupon.active} expiresAt={coupon.expires_at} />
                     </td>
                     <td className="max-w-[220px]">
                       {editingId === coupon.id ? (

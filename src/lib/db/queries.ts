@@ -9,6 +9,7 @@
  */
 
 import { pool, getPoolForContext, getActivePool } from "./index";
+import { parseMysqlUtcDate, toMysqlUtcDateTime } from "@/lib/coupon-expiry";
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { PAGE_SIZE, PLAN_CATALOG_USD, type AdminPlanCatalog } from "@/constants";
@@ -566,7 +567,7 @@ function mapTrialCouponRow(r: any): TrialCouponRow {
         ? null
         : Number(r.max_redemptions),
     percent_off: Number(r.percent_off ?? 90),
-    expires_at: new Date(r.expires_at),
+    expires_at: parseMysqlUtcDate(r.expires_at) ?? new Date(0),
     active: Boolean(r.active),
     note: r.note ?? null,
     created_by: r.created_by ?? null,
@@ -675,7 +676,7 @@ export async function createTrialCoupon(params: {
           params.code,
           params.maxRedemptions,
           params.percentOff,
-          params.expiresAt,
+          toMysqlUtcDateTime(params.expiresAt),
           params.note,
           params.createdBy,
         ]
@@ -737,8 +738,9 @@ export async function updateTrialCoupon(
     values.push(updates.percentOff);
   }
   if (updates.expiresAt !== undefined) {
+    const expiresAt = updates.expiresAt;
     sets.push("expires_at = ?");
-    values.push(updates.expiresAt);
+    values.push(toMysqlUtcDateTime(expiresAt));
   }
 
   if (sets.length === 0) return 0;
@@ -897,7 +899,7 @@ function mapPlanCouponRow(r: any): PlanCouponRow {
     plan: r.plan === "PRO" ? "PRO" : "CREATOR",
     percent_off: Number(r.percent_off),
     max_redemptions: r.max_redemptions == null ? null : Number(r.max_redemptions),
-    expires_at: new Date(r.expires_at),
+    expires_at: parseMysqlUtcDate(r.expires_at) ?? new Date(0),
     active: Boolean(r.active),
     note: r.note ?? null,
     created_by: r.created_by ?? null,
@@ -1012,7 +1014,7 @@ export async function createPlanCoupon(params: {
           params.plan,
           params.percentOff,
           params.maxRedemptions,
-          params.expiresAt,
+          toMysqlUtcDateTime(params.expiresAt),
           params.note,
           params.createdBy,
         ]
@@ -1066,8 +1068,9 @@ export async function updatePlanCoupon(
     values.push(updates.active ? 1 : 0);
   }
   if (updates.expiresAt !== undefined) {
+    const expiresAt = updates.expiresAt;
     sets.push("expires_at = ?");
-    values.push(updates.expiresAt);
+    values.push(toMysqlUtcDateTime(expiresAt));
   }
   if (updates.percentOff !== undefined) {
     sets.push("percent_off = ?");

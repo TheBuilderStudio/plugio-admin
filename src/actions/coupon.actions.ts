@@ -20,6 +20,7 @@ import {
 import { logAdminAction } from "@/lib/logger";
 import { invalidateAdminOverview } from "@/lib/db/admin-overview";
 import { PERCENT_INVALID_MESSAGE, isValidCouponPercent } from "@/lib/plan-coupon-preview";
+import { parseRequiredExpiry } from "@/lib/coupon-expiry";
 import type { ActionResult } from "@/types";
 
 function parsePercentOff(raw: number): { ok: true; value: number } | { ok: false; message: string } {
@@ -476,14 +477,6 @@ export async function setPlanCouponActiveAction(
       "Failed to update coupon status. Please try again."
     );
   }
-}
-
-function parseRequiredExpiry(raw: string): Date | null {
-  if (typeof raw !== "string" || !raw.trim()) return null;
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return null;
-  if (parsed.getTime() <= Date.now()) return null;
-  return parsed;
 }
 
 export async function setCouponActiveAction(
