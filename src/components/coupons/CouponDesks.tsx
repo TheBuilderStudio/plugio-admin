@@ -5,7 +5,7 @@ import { CouponManager } from "@/components/coupons/CouponManager";
 import { PlanCouponManager } from "@/components/coupons/PlanCouponManager";
 import type { PlanCouponRow, TrialCouponRow } from "@/types";
 import type { AdminPlanCatalog } from "@/constants";
-import { formatUsd } from "@/constants";
+import { formatInr, formatUsd, PLAN_CATALOG_USD } from "@/constants";
 import { trialPricePreviewLine } from "@/lib/plan-coupon-preview";
 
 type Desk = "trial" | "paid";
@@ -55,9 +55,11 @@ export function CouponDesks({
       {desk === "trial" ? (
         <div className="space-y-3">
           <p className="text-[13px] text-[var(--ink-soft)]">
-            Access via beta. Trial is {formatUsd(catalog.trialPrice)} for {catalog.trialDays} days of
-            the Creator workspace. Coupons are created here only — maximum 90% off. Every trial still
-            pays through Razorpay ({trialPricePreviewLine(90, catalog) || "90% still charges through Razorpay"}).
+            Access via beta. Trial is {formatUsd(catalog.trialPrice)} /{" "}
+            {formatInr((catalog.inr ?? PLAN_CATALOG_USD.inr).trialPrice)} for {catalog.trialDays}{" "}
+            days of the Creator workspace. Coupons are created here only — maximum 90% off. Every
+            trial still pays through Razorpay (
+            {trialPricePreviewLine(90, catalog) || "90% still charges through Razorpay"}).
           </p>
           <CouponManager coupons={trialCoupons} catalog={catalog} />
         </div>

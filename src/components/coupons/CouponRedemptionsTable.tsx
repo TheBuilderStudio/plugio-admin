@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { formatDateTime } from "@/lib/utils";
-import { formatUsd } from "@/constants";
+import { formatPayableMinor } from "@/constants";
 import type { CouponRedemptionRow } from "@/types";
 
 interface CouponRedemptionsTableProps {
@@ -61,9 +61,7 @@ export function CouponRedemptionsTable({
                     ) : null}
                   </td>
                   <td className="whitespace-nowrap font-semibold tabular-nums text-[var(--ink)]">
-                    {row.payable_cents == null
-                      ? "—"
-                      : formatUsd(row.payable_cents / 100)}
+                    {formatPayableMinor(row.payable_cents, row.currency)}
                   </td>
                   <td className="whitespace-nowrap text-[var(--ink-soft)]">
                     {formatDateTime(row.redeemed_at)}

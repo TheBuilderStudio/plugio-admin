@@ -107,6 +107,8 @@ export interface CouponRedemptionRow {
   coupon_code: string;
   kind: "TRIAL" | "CREATOR" | "PRO";
   payable_cents: number | null;
+  /** From the matching billing_orders row; payable_cents is currency-agnostic minors. */
+  currency: string | null;
   redeemed_at: Date;
 }
 
@@ -153,14 +155,19 @@ export interface DashboardStats {
 export interface BusinessOverview {
   access: DashboardStats;
   revenue: {
-    /** Sum of paid SUCCESS audit amounts (amount > 0), all time */
+    /** Sum of paid SUCCESS audit amounts (amount > 0), USD only */
     total_collected_usd: number;
     /** Same, last 30 days */
     collected_30d_usd: number;
-    /** Paid SUCCESS events (amount > 0) — invoice source of truth */
+    /** Paid SUCCESS INR amounts — never mixed into USD totals */
+    total_collected_inr: number;
+    collected_30d_inr: number;
+    /** Paid SUCCESS events (amount > 0) — USD invoices */
     paid_checkouts: number;
     paid_checkouts_30d: number;
-    /** Estimated MRR from ACTIVE Creator/Pro × catalog */
+    paid_checkouts_inr: number;
+    paid_checkouts_30d_inr: number;
+    /** Estimated MRR from ACTIVE Creator/Pro × USD catalog (seats are not currency-tagged) */
     estimated_mrr_usd: number;
   };
   plans: {

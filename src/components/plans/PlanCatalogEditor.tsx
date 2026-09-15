@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition, type FormEvent } from "rea
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { updatePlanCatalogAction } from "@/actions/plan.actions";
-import { formatUsd, termSavePercent, type AdminPlanCatalog } from "@/constants";
+import { formatInr, formatUsd, termSavePercent, PLAN_CATALOG_INR, type AdminPlanCatalog } from "@/constants";
 import { useAdminReadOnly } from "@/components/shared/AdminReadOnlyContext";
 import { trialPricePreviewLine } from "@/lib/plan-coupon-preview";
 
@@ -12,12 +12,13 @@ type Props = {
   catalog: AdminPlanCatalog;
 };
 
-function usdField(value: number): string {
+function moneyField(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
 
 export function PlanCatalogEditor({ catalog }: Props) {
   const isReadOnly = useAdminReadOnly();
+  const inrCatalog = catalog.inr ?? PLAN_CATALOG_INR;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(
@@ -25,15 +26,30 @@ export function PlanCatalogEditor({ catalog }: Props) {
   );
 
   const [trialDays, setTrialDays] = useState(String(catalog.trialDays));
-  const [trialPrice, setTrialPrice] = useState(usdField(catalog.trialPrice));
-  const [creatorMonthly, setCreatorMonthly] = useState(usdField(catalog.CREATOR.monthly));
-  const [creatorTwoMonths, setCreatorTwoMonths] = useState(usdField(catalog.CREATOR.twoMonths));
+  const [trialPrice, setTrialPrice] = useState(moneyField(catalog.trialPrice));
+  const [creatorMonthly, setCreatorMonthly] = useState(moneyField(catalog.CREATOR.monthly));
+  const [creatorTwoMonths, setCreatorTwoMonths] = useState(moneyField(catalog.CREATOR.twoMonths));
   const [creatorThreeMonths, setCreatorThreeMonths] = useState(
-    usdField(catalog.CREATOR.threeMonths)
+    moneyField(catalog.CREATOR.threeMonths)
   );
-  const [proMonthly, setProMonthly] = useState(usdField(catalog.PRO.monthly));
-  const [proTwoMonths, setProTwoMonths] = useState(usdField(catalog.PRO.twoMonths));
-  const [proThreeMonths, setProThreeMonths] = useState(usdField(catalog.PRO.threeMonths));
+  const [proMonthly, setProMonthly] = useState(moneyField(catalog.PRO.monthly));
+  const [proTwoMonths, setProTwoMonths] = useState(moneyField(catalog.PRO.twoMonths));
+  const [proThreeMonths, setProThreeMonths] = useState(moneyField(catalog.PRO.threeMonths));
+  const [trialPriceInr, setTrialPriceInr] = useState(moneyField(inrCatalog.trialPrice));
+  const [creatorMonthlyInr, setCreatorMonthlyInr] = useState(
+    moneyField(inrCatalog.CREATOR.monthly)
+  );
+  const [creatorTwoMonthsInr, setCreatorTwoMonthsInr] = useState(
+    moneyField(inrCatalog.CREATOR.twoMonths)
+  );
+  const [creatorThreeMonthsInr, setCreatorThreeMonthsInr] = useState(
+    moneyField(inrCatalog.CREATOR.threeMonths)
+  );
+  const [proMonthlyInr, setProMonthlyInr] = useState(moneyField(inrCatalog.PRO.monthly));
+  const [proTwoMonthsInr, setProTwoMonthsInr] = useState(moneyField(inrCatalog.PRO.twoMonths));
+  const [proThreeMonthsInr, setProThreeMonthsInr] = useState(
+    moneyField(inrCatalog.PRO.threeMonths)
+  );
   const [trialChannels, setTrialChannels] = useState(String(catalog.channelsPerPlatform.TRIAL));
   const [creatorChannels, setCreatorChannels] = useState(
     String(catalog.channelsPerPlatform.CREATOR)
@@ -50,17 +66,33 @@ export function PlanCatalogEditor({ catalog }: Props) {
   const creator3mSave = termSavePercent(Number(creatorMonthly), Number(creatorThreeMonths), 3);
   const pro2mSave = termSavePercent(Number(proMonthly), Number(proTwoMonths), 2);
   const pro3mSave = termSavePercent(Number(proMonthly), Number(proThreeMonths), 3);
+  const creator2mSaveInr = termSavePercent(
+    Number(creatorMonthlyInr),
+    Number(creatorTwoMonthsInr),
+    2
+  );
+  const creator3mSaveInr = termSavePercent(
+    Number(creatorMonthlyInr),
+    Number(creatorThreeMonthsInr),
+    3
+  );
+  const pro2mSaveInr = termSavePercent(Number(proMonthlyInr), Number(proTwoMonthsInr), 2);
+  const pro3mSaveInr = termSavePercent(Number(proMonthlyInr), Number(proThreeMonthsInr), 3);
 
   const invitePreview = useMemo(() => {
     const price = Number(trialPrice);
+    const priceInr = Number(trialPriceInr);
     const days = Number(trialDays);
-    if (!Number.isFinite(price) || !Number.isInteger(days)) return "";
+    if (!Number.isFinite(price) || !Number.isFinite(priceInr) || !Number.isInteger(days)) {
+      return "";
+    }
     return trialPricePreviewLine(90, {
       ...catalog,
       trialDays: days,
       trialPrice: price,
+      inr: { ...(catalog.inr ?? PLAN_CATALOG_INR), trialPrice: priceInr },
     });
-  }, [catalog, trialDays, trialPrice]);
+  }, [catalog, trialDays, trialPrice, trialPriceInr]);
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -74,6 +106,13 @@ export function PlanCatalogEditor({ catalog }: Props) {
         proMonthly: Number(proMonthly),
         proTwoMonths: Number(proTwoMonths),
         proThreeMonths: Number(proThreeMonths),
+        trialPriceInr: Number(trialPriceInr),
+        creatorMonthlyInr: Number(creatorMonthlyInr),
+        creatorTwoMonthsInr: Number(creatorTwoMonthsInr),
+        creatorThreeMonthsInr: Number(creatorThreeMonthsInr),
+        proMonthlyInr: Number(proMonthlyInr),
+        proTwoMonthsInr: Number(proTwoMonthsInr),
+        proThreeMonthsInr: Number(proThreeMonthsInr),
         trialChannels: Number(trialChannels),
         creatorChannels: Number(creatorChannels),
         proChannels: Number(proChannels),
@@ -106,9 +145,9 @@ export function PlanCatalogEditor({ catalog }: Props) {
         </h2>
         <p className="mb-4 text-[12.5px] text-[var(--ink-soft)]">
           List price and days. Invite coupons (Coupons desk, max 90%) compute off this list — not a
-          hardcoded $0.70.
+          hardcoded $0.70 or ₹59.90. INR is an explicit catalog, not FX from USD.
         </p>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <NumberField
             label="Days"
             value={trialDays}
@@ -124,6 +163,14 @@ export function PlanCatalogEditor({ catalog }: Props) {
             onChange={setTrialPrice}
             min={0.5}
             step="0.01"
+            disabled={isReadOnly}
+          />
+          <NumberField
+            label="List price (INR)"
+            value={trialPriceInr}
+            onChange={setTrialPriceInr}
+            min={1}
+            step="1"
             disabled={isReadOnly}
           />
           <NumberField
@@ -143,9 +190,13 @@ export function PlanCatalogEditor({ catalog }: Props) {
         ) : null}
       </section>
 
+      <p className="text-[12.5px] font-semibold uppercase tracking-[0.08em] text-[var(--ink-mute)]">
+        International (USD)
+      </p>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <PlanPriceCard
           title="Creator"
+          currency="USD"
           monthly={creatorMonthly}
           twoMonths={creatorTwoMonths}
           threeMonths={creatorThreeMonths}
@@ -153,6 +204,7 @@ export function PlanCatalogEditor({ catalog }: Props) {
           save2m={creator2mSave}
           save3m={creator3mSave}
           disabled={isReadOnly}
+          formatMoney={formatUsd}
           onMonthly={setCreatorMonthly}
           onTwoMonths={setCreatorTwoMonths}
           onThreeMonths={setCreatorThreeMonths}
@@ -160,6 +212,7 @@ export function PlanCatalogEditor({ catalog }: Props) {
         />
         <PlanPriceCard
           title="Pro"
+          currency="USD"
           monthly={proMonthly}
           twoMonths={proTwoMonths}
           threeMonths={proThreeMonths}
@@ -167,10 +220,49 @@ export function PlanCatalogEditor({ catalog }: Props) {
           save2m={pro2mSave}
           save3m={pro3mSave}
           disabled={isReadOnly}
+          formatMoney={formatUsd}
           onMonthly={setProMonthly}
           onTwoMonths={setProTwoMonths}
           onThreeMonths={setProThreeMonths}
           onChannels={setProChannels}
+        />
+      </div>
+
+      <p className="text-[12.5px] font-semibold uppercase tracking-[0.08em] text-[var(--ink-mute)]">
+        India (INR)
+      </p>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <PlanPriceCard
+          title="Creator"
+          currency="INR"
+          monthly={creatorMonthlyInr}
+          twoMonths={creatorTwoMonthsInr}
+          threeMonths={creatorThreeMonthsInr}
+          save2m={creator2mSaveInr}
+          save3m={creator3mSaveInr}
+          disabled={isReadOnly}
+          formatMoney={formatInr}
+          min={1}
+          step="1"
+          onMonthly={setCreatorMonthlyInr}
+          onTwoMonths={setCreatorTwoMonthsInr}
+          onThreeMonths={setCreatorThreeMonthsInr}
+        />
+        <PlanPriceCard
+          title="Pro"
+          currency="INR"
+          monthly={proMonthlyInr}
+          twoMonths={proTwoMonthsInr}
+          threeMonths={proThreeMonthsInr}
+          save2m={pro2mSaveInr}
+          save3m={pro3mSaveInr}
+          disabled={isReadOnly}
+          formatMoney={formatInr}
+          min={1}
+          step="1"
+          onMonthly={setProMonthlyInr}
+          onTwoMonths={setProTwoMonthsInr}
+          onThreeMonths={setProThreeMonthsInr}
         />
       </div>
 
@@ -194,6 +286,7 @@ export function PlanCatalogEditor({ catalog }: Props) {
 
 function PlanPriceCard({
   title,
+  currency,
   monthly,
   twoMonths,
   threeMonths,
@@ -201,23 +294,30 @@ function PlanPriceCard({
   save2m,
   save3m,
   disabled,
+  formatMoney,
+  min = 0.5,
+  step = "0.01",
   onMonthly,
   onTwoMonths,
   onThreeMonths,
   onChannels,
 }: {
   title: string;
+  currency: "USD" | "INR";
   monthly: string;
   twoMonths: string;
   threeMonths: string;
-  channels: string;
+  channels?: string;
   save2m: number | null;
   save3m: number | null;
   disabled: boolean;
+  formatMoney: (amount: number) => string;
+  min?: number;
+  step?: string;
   onMonthly: (v: string) => void;
   onTwoMonths: (v: string) => void;
   onThreeMonths: (v: string) => void;
-  onChannels: (v: string) => void;
+  onChannels?: (v: string) => void;
 }) {
   const monthlyN = Number(monthly);
   const was2 = Number.isFinite(monthlyN) ? monthlyN * 2 : null;
@@ -227,43 +327,47 @@ function PlanPriceCard({
     <section className="admin-card p-5 sm:p-6">
       <h2 className="mb-1 text-[15px] font-semibold tracking-tight text-[var(--ink)]">{title}</h2>
       <p className="mb-4 text-[12.5px] text-[var(--ink-soft)]">
-        Landing “Save X%” is {was2 != null ? `2 months vs ${formatUsd(was2)}` : "2 months vs monthly × 2"}{" "}
-        and {was3 != null ? `3 months vs ${formatUsd(was3)}` : "3 months vs monthly × 3"}. It is not a
-        fixed dollar amount.
+        Landing “Save X%” is {was2 != null ? `2 months vs ${formatMoney(was2)}` : "2 months vs monthly × 2"}{" "}
+        and {was3 != null ? `3 months vs ${formatMoney(was3)}` : "3 months vs monthly × 3"}. It is not a
+        fixed amount.
       </p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <NumberField
-          label="Monthly (USD)"
+          label={`Monthly (${currency})`}
           value={monthly}
           onChange={onMonthly}
-          min={0.5}
-          step="0.01"
+          min={min}
+          step={step}
           disabled={disabled}
         />
+        {channels != null && onChannels ? (
+          <NumberField
+            label="Channels per platform"
+            value={channels}
+            onChange={onChannels}
+            min={1}
+            max={10}
+            step="1"
+            disabled={disabled}
+          />
+        ) : (
+          <div />
+        )}
         <NumberField
-          label="Channels per platform"
-          value={channels}
-          onChange={onChannels}
-          min={1}
-          max={10}
-          step="1"
-          disabled={disabled}
-        />
-        <NumberField
-          label="2 months (USD)"
+          label={`2 months (${currency})`}
           value={twoMonths}
           onChange={onTwoMonths}
-          min={0.5}
-          step="0.01"
+          min={min}
+          step={step}
           disabled={disabled}
           hint={save2m != null ? `Landing shows Save ${save2m}%` : "No save badge (not cheaper than monthly × 2)"}
         />
         <NumberField
-          label="3 months (USD)"
+          label={`3 months (${currency})`}
           value={threeMonths}
           onChange={onThreeMonths}
-          min={0.5}
-          step="0.01"
+          min={min}
+          step={step}
           disabled={disabled}
           hint={save3m != null ? `Landing shows Save ${save3m}%` : "No save badge (not cheaper than monthly × 3)"}
         />

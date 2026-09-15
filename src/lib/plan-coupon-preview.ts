@@ -1,6 +1,7 @@
-import { PLAN_CATALOG_USD, formatUsd, type AdminPlanCatalog } from "@/constants";
+import { PLAN_CATALOG_USD, formatInr, formatUsd, type AdminPlanCatalog } from "@/constants";
 
 export const MIN_PAID_CENTS = 50;
+export const MIN_PAID_PAISE = 100;
 export const MIN_PERCENT_OFF = 1;
 export const MAX_PERCENT_OFF = 90;
 
@@ -28,12 +29,20 @@ export function isValidCouponPercent(percentOff: number): boolean {
 }
 
 /** Same rounding as backend BillingPlanConfig.payableCentsAfterPercent. */
-export function payableCentsAfterPercent(listCents: number, percentOff: number): number | null {
+export function payableMinorAfterPercent(
+  listMinor: number,
+  percentOff: number,
+  minMinor: number
+): number | null {
   if (!isValidCouponPercent(percentOff)) return null;
-  if (!Number.isInteger(listCents) || listCents < MIN_PAID_CENTS) return null;
-  const payable = Math.round((listCents * (100 - percentOff)) / 100);
-  if (payable < MIN_PAID_CENTS) return null;
+  if (!Number.isInteger(listMinor) || listMinor < minMinor) return null;
+  const payable = Math.round((listMinor * (100 - percentOff)) / 100);
+  if (payable < minMinor) return null;
   return payable;
+}
+
+export function payableCentsAfterPercent(listCents: number, percentOff: number): number | null {
+  return payableMinorAfterPercent(listCents, percentOff, MIN_PAID_CENTS);
 }
 
 export function percentWarning(percentOff: number): PercentWarning {
@@ -67,16 +76,26 @@ export function planPricePreviewLines(
   catalog: AdminPlanCatalog = PLAN_CATALOG_USD
 ): string[] {
   if (!isValidCouponPercent(percentOff)) return [];
-  const prices = catalog[plan];
+  const usdPrices = catalog[plan];
+  const inrPrices = (catalog.inr ?? PLAN_CATALOG_USD.inr)[plan];
   const planLabel = plan === "PRO" ? "Pro" : "Creator";
-  return TERM_LABELS.map(({ key, label }) => {
-    const listCents = Math.round(prices[key] * 100);
-    const payable = payableCentsAfterPercent(listCents, percentOff);
+  const usd = TERM_LABELS.map(({ key, label }) => {
+    const listCents = Math.round(usdPrices[key] * 100);
+    const payable = payableMinorAfterPercent(listCents, percentOff, MIN_PAID_CENTS);
     if (payable == null) {
-      return `${planLabel} · ${label}  ${formatUsd(prices[key])} → below $0.50 (cannot apply)`;
+      return `${planLabel} · ${label}  ${formatUsd(usdPrices[key])} → below $0.50 (cannot apply)`;
     }
-    return `${planLabel} · ${label}  ${formatUsd(prices[key])} → ${formatUsd(payable / 100)}`;
+    return `${planLabel} · ${label}  ${formatUsd(usdPrices[key])} → ${formatUsd(payable / 100)}`;
   });
+  const inr = TERM_LABELS.map(({ key, label }) => {
+    const listPaise = Math.round(inrPrices[key] * 100);
+    const payable = payableMinorAfterPercent(listPaise, percentOff, MIN_PAID_PAISE);
+    if (payable == null) {
+      return `${planLabel} · ${label}  ${formatInr(inrPrices[key])} → below ₹1 (cannot apply)`;
+    }
+    return `${planLabel} · ${label}  ${formatInr(inrPrices[key])} → ${formatInr(payable / 100)}`;
+  });
+  return [...usd, ...inr];
 }
 
 export function trialPricePreviewLine(
@@ -85,9 +104,17 @@ export function trialPricePreviewLine(
 ): string {
   if (!isValidCouponPercent(percentOff)) return "";
   const listCents = Math.round(catalog.trialPrice * 100);
-  const payable = payableCentsAfterPercent(listCents, percentOff);
-  if (payable == null) {
-    return `Trial · ${catalog.trialDays} days  ${formatUsd(catalog.trialPrice)} → below $0.50 (cannot apply)`;
-  }
-  return `Trial · ${catalog.trialDays} days  ${formatUsd(catalog.trialPrice)} → ${formatUsd(payable / 100)}`;
+  const payableUsd = payableMinorAfterPercent(listCents, percentOff, MIN_PAID_CENTS);
+  const usd =
+    payableUsd == null
+      ? `Trial · ${catalog.trialDays} days  ${formatUsd(catalog.trialPrice)} → below $0.50 (cannot apply)`
+      : `Trial · ${catalog.trialDays} days  ${formatUsd(catalog.trialPrice)} → ${formatUsd(payableUsd / 100)}`;
+  const inrList = (catalog.inr ?? PLAN_CATALOG_USD.inr).trialPrice;
+  const listPaise = Math.round(inrList * 100);
+  const payableInr = payableMinorAfterPercent(listPaise, percentOff, MIN_PAID_PAISE);
+  const inr =
+    payableInr == null
+      ? `${formatInr(inrList)} → below ₹1 (cannot apply)`
+      : `${formatInr(inrList)} → ${formatInr(payableInr / 100)}`;
+  return `${usd} · ${inr}`;
 }

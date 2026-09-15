@@ -28,7 +28,7 @@ import { useAdminReadOnly } from "@/components/shared/AdminReadOnlyContext";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { CouponStatusBadge } from "@/components/coupons/CouponStatusBadge";
 import type { AdminPlanCatalog } from "@/constants";
-import { formatUsd } from "@/constants";
+import { formatInr, formatUsd, PLAN_CATALOG_USD } from "@/constants";
 
 interface CouponManagerProps {
   coupons: TrialCouponRow[];
@@ -154,7 +154,9 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
           Create trial code
         </h2>
         <p className="mb-4 text-[12.5px] text-[var(--ink-soft)]">
-          Percent off the {formatUsd(catalog.trialPrice)} / {catalog.trialDays}-day list. Maximum 90% — every trial still pays through Razorpay.
+          Percent off the {formatUsd(catalog.trialPrice)} /{" "}
+          {formatInr((catalog.inr ?? PLAN_CATALOG_USD.inr).trialPrice)} {catalog.trialDays}-day
+          list. Maximum 90% — every trial still pays through Razorpay.
         </p>
         {isReadOnly ? (
           <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-center text-[13px] font-medium text-sky-800">

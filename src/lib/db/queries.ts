@@ -774,6 +774,32 @@ export async function setTrialCouponActive(
   return Number(result?.affectedRows ?? 0);
 }
 
+const REDEMPTION_CURRENCY_SQL = `(
+  SELECT b.currency
+  FROM billing_orders b
+  WHERE b.user_id = x.user_id
+    AND (x.coupon_code IS NULL OR b.coupon_code <=> x.coupon_code)
+  ORDER BY b.created_at DESC
+  LIMIT 1
+)`;
+
+function mapCouponRedemptionRow(r: any): CouponRedemptionRow {
+  return {
+    id: r.id,
+    user_id: r.user_id,
+    user_email: r.user_email ?? null,
+    user_name: r.user_name ?? null,
+    coupon_code: r.coupon_code,
+    kind: r.kind === "CREATOR" || r.kind === "PRO" ? r.kind : "TRIAL",
+    payable_cents: r.payable_cents == null ? null : Number(r.payable_cents),
+    currency:
+      typeof r.currency === "string" && r.currency.trim()
+        ? r.currency.trim().toUpperCase()
+        : null,
+    redeemed_at: new Date(r.redeemed_at),
+  };
+}
+
 /**
  * Recent coupon redemptions for the control panel (who used which code).
  */
@@ -781,10 +807,7 @@ export async function listRecentCouponRedemptions(
   limit = 25
 ): Promise<CouponRedemptionRow[]> {
   const safeLimit = Math.min(Math.max(1, limit), 100);
-  try {
-    const [rows] = await pool.execute<any[]>(
-      `
-      SELECT * FROM (
+  const unionSql = `
         SELECT
           r.id,
           r.user_id,
@@ -808,24 +831,34 @@ export async function listRecentCouponRedemptions(
           u.name AS user_name
         FROM plan_coupon_redemptions p
         LEFT JOIN users u ON u.id = p.user_id
-      ) x
+  `;
+  try {
+    const [rows] = await pool.execute<any[]>(
+      `
+      SELECT x.*, ${REDEMPTION_CURRENCY_SQL} AS currency
+      FROM (${unionSql}) x
       ORDER BY x.redeemed_at DESC
       LIMIT ${safeLimit}
     `
     );
-    return rows.map((r) => ({
-      id: r.id,
-      user_id: r.user_id,
-      user_email: r.user_email ?? null,
-      user_name: r.user_name ?? null,
-      coupon_code: r.coupon_code,
-      kind: r.kind === "CREATOR" || r.kind === "PRO" ? r.kind : "TRIAL",
-      payable_cents: r.payable_cents == null ? null : Number(r.payable_cents),
-      redeemed_at: new Date(r.redeemed_at),
-    }));
+    return rows.map(mapCouponRedemptionRow);
   } catch (error: any) {
-    if (error.code === "ER_NO_SUCH_TABLE" || error.code === "ER_BAD_FIELD_ERROR") {
-      return listTrialOnlyRedemptions(safeLimit);
+    if (error.code === "ER_BAD_FIELD_ERROR" || error.code === "ER_NO_SUCH_TABLE") {
+      try {
+        const [rows] = await pool.execute<any[]>(
+          `
+          SELECT * FROM (${unionSql}) x
+          ORDER BY x.redeemed_at DESC
+          LIMIT ${safeLimit}
+        `
+        );
+        return rows.map(mapCouponRedemptionRow);
+      } catch (inner: any) {
+        if (inner.code === "ER_NO_SUCH_TABLE" || inner.code === "ER_BAD_FIELD_ERROR") {
+          return listTrialOnlyRedemptions(safeLimit);
+        }
+        throw inner;
+      }
     }
     throw error;
   }
@@ -842,32 +875,34 @@ async function listTrialOnlyRedemptions(safeLimit: number): Promise<CouponRedemp
         r.payable_cents,
         r.redeemed_at,
         u.email AS user_email,
-        u.name AS user_name
+        u.name AS user_name,
+        (
+          SELECT b.currency
+          FROM billing_orders b
+          WHERE b.user_id = r.user_id
+            AND (r.coupon_code IS NULL OR b.coupon_code <=> r.coupon_code)
+          ORDER BY b.created_at DESC
+          LIMIT 1
+        ) AS currency
       FROM coupon_redemptions r
       LEFT JOIN users u ON u.id = r.user_id
       ORDER BY r.redeemed_at DESC
       LIMIT ${safeLimit}
     `
     );
-    return rows.map((r) => ({
-      id: r.id,
-      user_id: r.user_id,
-      user_email: r.user_email ?? null,
-      user_name: r.user_name ?? null,
-      coupon_code: r.coupon_code,
-      kind: "TRIAL" as const,
-      payable_cents: r.payable_cents == null ? null : Number(r.payable_cents),
-      redeemed_at: new Date(r.redeemed_at),
-    }));
+    return rows.map((r) => mapCouponRedemptionRow({ ...r, kind: "TRIAL" }));
   } catch (error: any) {
-    if (error.code === "ER_NO_SUCH_TABLE") return [];
-    if (error.code === "ER_BAD_FIELD_ERROR") {
+    if (error.code !== "ER_NO_SUCH_TABLE" && error.code !== "ER_BAD_FIELD_ERROR") {
+      throw error;
+    }
+    try {
       const [rows] = await pool.execute<any[]>(
         `
         SELECT
           r.id,
           r.user_id,
           r.coupon_code,
+          r.payable_cents,
           r.redeemed_at,
           u.email AS user_email,
           u.name AS user_name
@@ -877,18 +912,31 @@ async function listTrialOnlyRedemptions(safeLimit: number): Promise<CouponRedemp
         LIMIT ${safeLimit}
       `
       );
-      return rows.map((r) => ({
-        id: r.id,
-        user_id: r.user_id,
-        user_email: r.user_email ?? null,
-        user_name: r.user_name ?? null,
-        coupon_code: r.coupon_code,
-        kind: "TRIAL" as const,
-        payable_cents: 0,
-        redeemed_at: new Date(r.redeemed_at),
-      }));
+      return rows.map((r) => mapCouponRedemptionRow({ ...r, kind: "TRIAL" }));
+    } catch (inner: any) {
+      if (inner.code === "ER_NO_SUCH_TABLE") return [];
+      if (inner.code === "ER_BAD_FIELD_ERROR") {
+        const [rows] = await pool.execute<any[]>(
+          `
+          SELECT
+            r.id,
+            r.user_id,
+            r.coupon_code,
+            r.redeemed_at,
+            u.email AS user_email,
+            u.name AS user_name
+          FROM coupon_redemptions r
+          LEFT JOIN users u ON u.id = r.user_id
+          ORDER BY r.redeemed_at DESC
+          LIMIT ${safeLimit}
+        `
+        );
+        return rows.map((r) =>
+          mapCouponRedemptionRow({ ...r, kind: "TRIAL", payable_cents: 0, currency: null })
+        );
+      }
+      throw inner;
     }
-    throw error;
   }
 }
 
@@ -1119,6 +1167,27 @@ function centsToUsd(cents: unknown): number {
   return Number(cents ?? 0) / 100;
 }
 
+function paiseToInr(paise: unknown): number {
+  return Number(paise ?? 0) / 100;
+}
+
+function mapInrCatalog(row: Record<string, unknown>): AdminPlanCatalog["inr"] {
+  const fallback = PLAN_CATALOG_USD.inr;
+  return {
+    trialPrice: paiseToInr(row.trial_price_inr_paise) || fallback.trialPrice,
+    CREATOR: {
+      monthly: paiseToInr(row.creator_monthly_inr_paise) || fallback.CREATOR.monthly,
+      twoMonths: paiseToInr(row.creator_two_month_inr_paise) || fallback.CREATOR.twoMonths,
+      threeMonths: paiseToInr(row.creator_three_month_inr_paise) || fallback.CREATOR.threeMonths,
+    },
+    PRO: {
+      monthly: paiseToInr(row.pro_monthly_inr_paise) || fallback.PRO.monthly,
+      twoMonths: paiseToInr(row.pro_two_month_inr_paise) || fallback.PRO.twoMonths,
+      threeMonths: paiseToInr(row.pro_three_month_inr_paise) || fallback.PRO.threeMonths,
+    },
+  };
+}
+
 function mapBillingPlanSettingsRow(row: Record<string, unknown>): AdminPlanCatalog {
   return {
     currency: "USD",
@@ -1142,6 +1211,7 @@ function mapBillingPlanSettingsRow(row: Record<string, unknown>): AdminPlanCatal
       ),
       PRO: Number(row.pro_channels_per_platform ?? PLAN_CATALOG_USD.channelsPerPlatform.PRO),
     },
+    inr: mapInrCatalog(row),
   };
 }
 
@@ -1180,6 +1250,8 @@ export async function updateBillingPlanSettings(params: {
 }): Promise<void> {
   const { catalog, updatedBy } = params;
   const usdToCents = (n: number) => Math.round(n * 100);
+  const inrToPaise = (n: number) => Math.round(n * 100);
+  const inr = catalog.inr ?? PLAN_CATALOG_USD.inr;
   const activePool = await getActivePool();
   const [result] = await activePool.execute<any>(
     `
@@ -1187,27 +1259,41 @@ export async function updateBillingPlanSettings(params: {
       id,
       trial_days,
       trial_price_cents,
+      trial_price_inr_paise,
       creator_monthly_cents,
       creator_two_month_cents,
       creator_three_month_cents,
+      creator_monthly_inr_paise,
+      creator_two_month_inr_paise,
+      creator_three_month_inr_paise,
       pro_monthly_cents,
       pro_two_month_cents,
       pro_three_month_cents,
+      pro_monthly_inr_paise,
+      pro_two_month_inr_paise,
+      pro_three_month_inr_paise,
       trial_channels_per_platform,
       creator_channels_per_platform,
       pro_channels_per_platform,
       updated_at,
       updated_by
-    ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(6), ?)
+    ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(6), ?)
     ON DUPLICATE KEY UPDATE
       trial_days = VALUES(trial_days),
       trial_price_cents = VALUES(trial_price_cents),
+      trial_price_inr_paise = VALUES(trial_price_inr_paise),
       creator_monthly_cents = VALUES(creator_monthly_cents),
       creator_two_month_cents = VALUES(creator_two_month_cents),
       creator_three_month_cents = VALUES(creator_three_month_cents),
+      creator_monthly_inr_paise = VALUES(creator_monthly_inr_paise),
+      creator_two_month_inr_paise = VALUES(creator_two_month_inr_paise),
+      creator_three_month_inr_paise = VALUES(creator_three_month_inr_paise),
       pro_monthly_cents = VALUES(pro_monthly_cents),
       pro_two_month_cents = VALUES(pro_two_month_cents),
       pro_three_month_cents = VALUES(pro_three_month_cents),
+      pro_monthly_inr_paise = VALUES(pro_monthly_inr_paise),
+      pro_two_month_inr_paise = VALUES(pro_two_month_inr_paise),
+      pro_three_month_inr_paise = VALUES(pro_three_month_inr_paise),
       trial_channels_per_platform = VALUES(trial_channels_per_platform),
       creator_channels_per_platform = VALUES(creator_channels_per_platform),
       pro_channels_per_platform = VALUES(pro_channels_per_platform),
@@ -1217,12 +1303,19 @@ export async function updateBillingPlanSettings(params: {
     [
       catalog.trialDays,
       usdToCents(catalog.trialPrice),
+      inrToPaise(inr.trialPrice),
       usdToCents(catalog.CREATOR.monthly),
       usdToCents(catalog.CREATOR.twoMonths),
       usdToCents(catalog.CREATOR.threeMonths),
+      inrToPaise(inr.CREATOR.monthly),
+      inrToPaise(inr.CREATOR.twoMonths),
+      inrToPaise(inr.CREATOR.threeMonths),
       usdToCents(catalog.PRO.monthly),
       usdToCents(catalog.PRO.twoMonths),
       usdToCents(catalog.PRO.threeMonths),
+      inrToPaise(inr.PRO.monthly),
+      inrToPaise(inr.PRO.twoMonths),
+      inrToPaise(inr.PRO.threeMonths),
       catalog.channelsPerPlatform.TRIAL,
       catalog.channelsPerPlatform.CREATOR,
       catalog.channelsPerPlatform.PRO,

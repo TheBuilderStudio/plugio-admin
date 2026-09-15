@@ -19,8 +19,12 @@ const EMPTY_OVERVIEW: BusinessOverview = {
   revenue: {
     total_collected_usd: 0,
     collected_30d_usd: 0,
+    total_collected_inr: 0,
+    collected_30d_inr: 0,
     paid_checkouts: 0,
     paid_checkouts_30d: 0,
+    paid_checkouts_inr: 0,
+    paid_checkouts_30d_inr: 0,
     estimated_mrr_usd: 0,
   },
   plans: {

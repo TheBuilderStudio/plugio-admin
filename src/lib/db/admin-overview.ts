@@ -64,21 +64,33 @@ async function safeQueryList<T>(
 async function queryRevenueAggregates(db: Pool): Promise<{
   total_collected_usd: number;
   collected_30d_usd: number;
+  total_collected_inr: number;
+  collected_30d_inr: number;
   paid_checkouts: number;
   paid_checkouts_30d: number;
+  paid_checkouts_inr: number;
+  paid_checkouts_30d_inr: number;
 }> {
   try {
     const [rows] = await db.execute<any[]>(
       `
       SELECT
-        COALESCE(SUM(t.amt), 0) AS total_collected_usd,
+        COALESCE(SUM(CASE WHEN t.currency = 'INR' THEN 0 ELSE t.amt END), 0) AS total_collected_usd,
         COALESCE(SUM(CASE
-          WHEN t.created_at >= DATE_SUB(NOW(6), INTERVAL 30 DAY) THEN t.amt
-          ELSE 0 END), 0) AS collected_30d_usd,
-        COUNT(*) AS paid_checkouts,
+          WHEN t.created_at >= DATE_SUB(NOW(6), INTERVAL 30 DAY) AND t.currency <> 'INR'
+          THEN t.amt ELSE 0 END), 0) AS collected_30d_usd,
+        COALESCE(SUM(CASE WHEN t.currency = 'INR' THEN t.amt ELSE 0 END), 0) AS total_collected_inr,
         COALESCE(SUM(CASE
-          WHEN t.created_at >= DATE_SUB(NOW(6), INTERVAL 30 DAY) THEN 1
-          ELSE 0 END), 0) AS paid_checkouts_30d
+          WHEN t.created_at >= DATE_SUB(NOW(6), INTERVAL 30 DAY) AND t.currency = 'INR'
+          THEN t.amt ELSE 0 END), 0) AS collected_30d_inr,
+        COALESCE(SUM(CASE WHEN t.currency = 'INR' THEN 0 ELSE 1 END), 0) AS paid_checkouts,
+        COALESCE(SUM(CASE
+          WHEN t.created_at >= DATE_SUB(NOW(6), INTERVAL 30 DAY) AND t.currency <> 'INR'
+          THEN 1 ELSE 0 END), 0) AS paid_checkouts_30d,
+        COALESCE(SUM(CASE WHEN t.currency = 'INR' THEN 1 ELSE 0 END), 0) AS paid_checkouts_inr,
+        COALESCE(SUM(CASE
+          WHEN t.created_at >= DATE_SUB(NOW(6), INTERVAL 30 DAY) AND t.currency = 'INR'
+          THEN 1 ELSE 0 END), 0) AS paid_checkouts_30d_inr
       FROM (
         SELECT
           COALESCE(
@@ -95,7 +107,11 @@ async function queryRevenueAggregates(db: Pool): Promise<{
                 1
               ) AS DECIMAL(12, 2)
             )
-          ) AS amt
+          ) AS amt,
+          COALESCE(
+            MAX(CASE WHEN UPPER(details) LIKE '%CURRENCY=INR%' THEN 'INR' END),
+            'USD'
+          ) AS currency
         FROM payment_audit_events
         WHERE UPPER(status) IN ('SUCCESS', 'SUCCEEDED', 'PAID', 'CAPTURED')
           AND event_type IN (
@@ -105,10 +121,6 @@ async function queryRevenueAggregates(db: Pool): Promise<{
           )
           AND details IS NOT NULL
           AND details LIKE '%amount=%'
-          AND (
-            details LIKE '%currency=USD%'
-            OR details NOT LIKE '%currency=%'
-          )
         GROUP BY dedupe_key
       ) t
       WHERE t.amt > 0
@@ -118,16 +130,24 @@ async function queryRevenueAggregates(db: Pool): Promise<{
     return {
       total_collected_usd: Number(row.total_collected_usd ?? 0),
       collected_30d_usd: Number(row.collected_30d_usd ?? 0),
+      total_collected_inr: Number(row.total_collected_inr ?? 0),
+      collected_30d_inr: Number(row.collected_30d_inr ?? 0),
       paid_checkouts: Number(row.paid_checkouts ?? 0),
       paid_checkouts_30d: Number(row.paid_checkouts_30d ?? 0),
+      paid_checkouts_inr: Number(row.paid_checkouts_inr ?? 0),
+      paid_checkouts_30d_inr: Number(row.paid_checkouts_30d_inr ?? 0),
     };
   } catch (error: any) {
     if (error?.code === "ER_NO_SUCH_TABLE") {
       return {
         total_collected_usd: 0,
         collected_30d_usd: 0,
+        total_collected_inr: 0,
+        collected_30d_inr: 0,
         paid_checkouts: 0,
         paid_checkouts_30d: 0,
+        paid_checkouts_inr: 0,
+        paid_checkouts_30d_inr: 0,
       };
     }
     throw error;
@@ -165,6 +185,22 @@ async function loadPlanCatalog(db: Pool): Promise<AdminPlanCatalog> {
           row.creator_channels_per_platform ?? PLAN_CATALOG_USD.channelsPerPlatform.CREATOR
         ),
         PRO: Number(row.pro_channels_per_platform ?? PLAN_CATALOG_USD.channelsPerPlatform.PRO),
+      },
+      inr: {
+        trialPrice: usd(row.trial_price_inr_paise, PLAN_CATALOG_USD.inr.trialPrice),
+        CREATOR: {
+          monthly: usd(row.creator_monthly_inr_paise, PLAN_CATALOG_USD.inr.CREATOR.monthly),
+          twoMonths: usd(row.creator_two_month_inr_paise, PLAN_CATALOG_USD.inr.CREATOR.twoMonths),
+          threeMonths: usd(
+            row.creator_three_month_inr_paise,
+            PLAN_CATALOG_USD.inr.CREATOR.threeMonths
+          ),
+        },
+        PRO: {
+          monthly: usd(row.pro_monthly_inr_paise, PLAN_CATALOG_USD.inr.PRO.monthly),
+          twoMonths: usd(row.pro_two_month_inr_paise, PLAN_CATALOG_USD.inr.PRO.twoMonths),
+          threeMonths: usd(row.pro_three_month_inr_paise, PLAN_CATALOG_USD.inr.PRO.threeMonths),
+        },
       },
     };
   } catch (error: any) {

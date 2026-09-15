@@ -16,15 +16,26 @@ export function extractDetailValue(
 }
 
 /**
- * Paid USD amount from an audit details string.
- * Returns 0 for missing/invalid amounts, leftover $0 trials, or non-USD
- * currencies (do not mix currencies into a USD revenue total).
+ * Paid amount from an audit details string for one currency.
+ * Returns 0 for missing/invalid amounts, leftover $0 trials, or a different currency.
+ * Missing currency is treated as USD (legacy audits).
  */
 export function extractPaidUsdAmount(details: string | null | undefined): number {
+  return extractPaidAmount(details, "USD");
+}
+
+export function extractPaidInrAmount(details: string | null | undefined): number {
+  return extractPaidAmount(details, "INR");
+}
+
+function extractPaidAmount(
+  details: string | null | undefined,
+  expected: "USD" | "INR"
+): number {
   if (!details) return 0;
 
   const currency = (extractDetailValue(details, "currency") ?? "USD").toUpperCase();
-  if (currency !== "USD") return 0;
+  if (currency !== expected) return 0;
 
   const raw = extractDetailValue(details, "amount");
   if (!raw) return 0;
@@ -74,34 +85,58 @@ export function sumPaidUsdRevenue(
 ): {
   total_collected_usd: number;
   collected_30d_usd: number;
+  total_collected_inr: number;
+  collected_30d_inr: number;
   paid_checkouts: number;
   paid_checkouts_30d: number;
+  paid_checkouts_inr: number;
+  paid_checkouts_30d_inr: number;
 } {
   const cutoff30d = nowMs - 30 * 24 * 60 * 60 * 1000;
-  let totalCollected = 0;
-  let collected30d = 0;
-  let paidCheckouts = 0;
-  let paidCheckouts30d = 0;
+  let totalCollectedUsd = 0;
+  let collected30dUsd = 0;
+  let totalCollectedInr = 0;
+  let collected30dInr = 0;
+  let paidCheckoutsUsd = 0;
+  let paidCheckouts30dUsd = 0;
+  let paidCheckoutsInr = 0;
+  let paidCheckouts30dInr = 0;
 
   for (const row of dedupePaymentRevenueRows(rows)) {
-    const amount = extractPaidUsdAmount(row.details);
-    if (amount <= 0) continue;
-
-    paidCheckouts += 1;
-    totalCollected += amount;
+    const usd = extractPaidUsdAmount(row.details);
+    const inr = extractPaidInrAmount(row.details);
+    if (usd <= 0 && inr <= 0) continue;
 
     const created = new Date(row.created_at).getTime();
-    if (Number.isFinite(created) && created >= cutoff30d) {
-      paidCheckouts30d += 1;
-      collected30d += amount;
+    const in30d = Number.isFinite(created) && created >= cutoff30d;
+
+    if (inr > 0) {
+      paidCheckoutsInr += 1;
+      totalCollectedInr += inr;
+      if (in30d) {
+        paidCheckouts30dInr += 1;
+        collected30dInr += inr;
+      }
+      continue;
+    }
+
+    paidCheckoutsUsd += 1;
+    totalCollectedUsd += usd;
+    if (in30d) {
+      paidCheckouts30dUsd += 1;
+      collected30dUsd += usd;
     }
   }
 
   return {
-    total_collected_usd: roundMoney(totalCollected),
-    collected_30d_usd: roundMoney(collected30d),
-    paid_checkouts: paidCheckouts,
-    paid_checkouts_30d: paidCheckouts30d,
+    total_collected_usd: roundMoney(totalCollectedUsd),
+    collected_30d_usd: roundMoney(collected30dUsd),
+    total_collected_inr: roundMoney(totalCollectedInr),
+    collected_30d_inr: roundMoney(collected30dInr),
+    paid_checkouts: paidCheckoutsUsd,
+    paid_checkouts_30d: paidCheckouts30dUsd,
+    paid_checkouts_inr: paidCheckoutsInr,
+    paid_checkouts_30d_inr: paidCheckouts30dInr,
   };
 }
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Youtube, Instagram, Facebook } from "lucide-react";
 import { formatRelativeTime, cn, getInitials } from "@/lib/utils";
-import { formatUsd } from "@/constants";
+import { formatInr, formatUsd } from "@/constants";
 import type { AdminOverviewPayload, BetaRequestRow, BusinessOverview } from "@/types";
 import { AdminPage, AdminCard } from "@/components/ui/page-shell";
 
@@ -134,20 +134,26 @@ export function OverviewView({
           </div>
           <div className={cn("grid gap-px bg-[var(--line)]", queueBusy ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-4")}>
             <div className="bg-[var(--paper)] px-5 py-4">
-              <p className="text-[11px] font-medium text-[var(--ink-mute)]">Collected</p>
+              <p className="text-[11px] font-medium text-[var(--ink-mute)]">Collected (30d)</p>
               <p className="mt-1 text-[22px] font-semibold tabular-nums tracking-tight text-[var(--ink)]">
+                {formatInr(revenue.collected_30d_inr)}
+              </p>
+              <p className="mt-0.5 text-[13px] font-semibold tabular-nums text-[var(--ink)]">
                 {formatUsd(revenue.collected_30d_usd)}
               </p>
               <p className="mt-0.5 text-[12px] text-[var(--ink-soft)]">
-                {revenue.paid_checkouts_30d} invoices · {formatUsd(revenue.total_collected_usd)} all-time
+                {revenue.paid_checkouts_30d_inr} INR · {revenue.paid_checkouts_30d} USD invoices
+                · all-time {formatInr(revenue.total_collected_inr)} · {formatUsd(revenue.total_collected_usd)}
               </p>
             </div>
             <div className="bg-[var(--paper)] px-5 py-4">
-              <p className="text-[11px] font-medium text-[var(--ink-mute)]">Est. MRR</p>
+              <p className="text-[11px] font-medium text-[var(--ink-mute)]">Est. MRR (USD list)</p>
               <p className="mt-1 text-[22px] font-semibold tabular-nums tracking-tight text-[var(--ink)]">
                 {formatUsd(revenue.estimated_mrr_usd)}
               </p>
-              <p className="mt-0.5 text-[12px] text-[var(--ink-soft)]">Live paid plans</p>
+              <p className="mt-0.5 text-[12px] text-[var(--ink-soft)]">
+                Live paid plans · USD catalog (seats are not currency-tagged)
+              </p>
             </div>
             <div className="bg-[var(--paper)] px-5 py-4">
               <p className="text-[11px] font-medium text-[var(--ink-mute)]">Paid</p>

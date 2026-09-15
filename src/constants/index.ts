@@ -53,17 +53,37 @@ export const SocialPlatform = {
   FACEBOOK: "FACEBOOK",
 } as const;
 
+export type AdminPlanTermPrices = {
+  monthly: number;
+  twoMonths: number;
+  threeMonths: number;
+};
+
+export type AdminInrCatalog = {
+  trialPrice: number;
+  CREATOR: AdminPlanTermPrices;
+  PRO: AdminPlanTermPrices;
+};
+
 /**
  * Paid catalog defaults — live values live in billing_plan_settings (Admin → Plans).
  * Used as fallback when the table is missing, and for typed helpers.
+ * INR list prices are explicit (rupees), not converted from USD.
  */
 export type AdminPlanCatalog = {
   currency: "USD";
   trialDays: number;
   trialPrice: number;
-  CREATOR: { monthly: number; twoMonths: number; threeMonths: number };
-  PRO: { monthly: number; twoMonths: number; threeMonths: number };
+  CREATOR: AdminPlanTermPrices;
+  PRO: AdminPlanTermPrices;
   channelsPerPlatform: { TRIAL: number; CREATOR: number; PRO: number };
+  inr: AdminInrCatalog;
+};
+
+export const PLAN_CATALOG_INR: AdminInrCatalog = {
+  trialPrice: 599,
+  CREATOR: { monthly: 1299, twoMonths: 2299, threeMonths: 3299 },
+  PRO: { monthly: 1699, twoMonths: 2999, threeMonths: 4299 },
 };
 
 export const PLAN_CATALOG_USD: AdminPlanCatalog = {
@@ -73,6 +93,7 @@ export const PLAN_CATALOG_USD: AdminPlanCatalog = {
   CREATOR: { monthly: 15, twoMonths: 27, threeMonths: 39 },
   PRO: { monthly: 20, twoMonths: 36, threeMonths: 51 },
   channelsPerPlatform: { TRIAL: 2, CREATOR: 3, PRO: 4 },
+  inr: { ...PLAN_CATALOG_INR, CREATOR: { ...PLAN_CATALOG_INR.CREATOR }, PRO: { ...PLAN_CATALOG_INR.PRO } },
 };
 
 export function catalogPeriodPriceUsd(
@@ -116,13 +137,39 @@ export function termSavePercent(
 }
 
 export function formatUsd(amount: number): string {
-  if (!Number.isFinite(amount)) return "$0";
+  return formatMajor(amount, "USD", "en-US", "$0");
+}
+
+export function formatInr(amount: number): string {
+  return formatMajor(amount, "INR", "en-IN", "₹0");
+}
+
+/** Format coupon payable minors using the order currency. Never assume USD. */
+export function formatPayableMinor(
+  payableCents: number | null | undefined,
+  currency?: string | null
+): string {
+  if (payableCents == null || !Number.isFinite(payableCents)) return "—";
+  const major = payableCents / 100;
+  const code = (currency ?? "").trim().toUpperCase();
+  if (code === "INR") return formatInr(major);
+  if (code === "USD") return formatUsd(major);
+  return major.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+}
+
+function formatMajor(
+  amount: number,
+  currency: "USD" | "INR",
+  locale: string,
+  fallback: string
+): string {
+  if (!Number.isFinite(amount)) return fallback;
   const rounded = Math.round(amount * 100) / 100;
-  const hasCents = Math.round(rounded * 100) % 100 !== 0;
-  return new Intl.NumberFormat("en-US", {
+  const hasFraction = Math.round(rounded * 100) % 100 !== 0;
+  return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "USD",
-    minimumFractionDigits: hasCents ? 2 : 0,
+    currency,
+    minimumFractionDigits: hasFraction ? 2 : 0,
     maximumFractionDigits: 2,
   }).format(rounded);
 }

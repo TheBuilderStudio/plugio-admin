@@ -1,5 +1,12 @@
 import type { TrialCouponRow } from "@/types";
-import { PLAN_CATALOG_USD, channelsLine, formatUsd, type AdminPlanCatalog } from "@/constants";
+import {
+  PLAN_CATALOG_INR,
+  PLAN_CATALOG_USD,
+  channelsLine,
+  formatInr,
+  formatUsd,
+  type AdminPlanCatalog,
+} from "@/constants";
 
 export function couponHasRemaining(coupon: TrialCouponRow): boolean {
   if (!coupon.active) return false;
@@ -22,7 +29,9 @@ export function buildCreatorOutreachScript(options: {
   const catalog = options.catalog ?? PLAN_CATALOG_USD;
   const first = options.name?.trim().split(/\s+/)[0] || "there";
   const channels = channelsLine(catalog.channelsPerPlatform.TRIAL);
-  const creator2m = formatUsd(catalog.CREATOR.twoMonths);
+  const creator2mUsd = formatUsd(catalog.CREATOR.twoMonths);
+  const creator2mInr = formatInr((catalog.inr ?? PLAN_CATALOG_INR).CREATOR.twoMonths);
+  const creator2m = `${creator2mUsd} / ${creator2mInr}`;
   const trialDays = catalog.trialDays;
 
   if (!options.couponCode) {

@@ -7,7 +7,7 @@ import { updateBillingPlanSettings } from "@/lib/db/queries";
 import { logAdminAction } from "@/lib/logger";
 import { invalidateAdminOverview } from "@/lib/db/admin-overview";
 import { type AdminPlanCatalog } from "@/constants";
-import { MIN_PAID_CENTS } from "@/lib/plan-coupon-preview";
+import { MIN_PAID_CENTS, MIN_PAID_PAISE } from "@/lib/plan-coupon-preview";
 import type { ActionResult } from "@/types";
 
 const MIN_CHANNELS = 1;
@@ -34,6 +34,21 @@ function parseUsd(raw: unknown, label: string): number {
   return cents / 100;
 }
 
+function parseInr(raw: unknown, label: string): number {
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(n)) {
+    throw new ValidationError(`${label} must be a number.`);
+  }
+  const paise = Math.round(n * 100);
+  if (paise < MIN_PAID_PAISE) {
+    throw new ValidationError(`${label} must be at least ₹1.`);
+  }
+  if (paise > 99_999_00) {
+    throw new ValidationError(`${label} is too large.`);
+  }
+  return paise / 100;
+}
+
 function parseIntInRange(raw: unknown, label: string, min: number, max: number): number {
   const n = typeof raw === "number" ? raw : Number(raw);
   if (!Number.isInteger(n) || n < min || n > max) {
@@ -51,6 +66,13 @@ export async function updatePlanCatalogAction(input: {
   proMonthly: number;
   proTwoMonths: number;
   proThreeMonths: number;
+  trialPriceInr: number;
+  creatorMonthlyInr: number;
+  creatorTwoMonthsInr: number;
+  creatorThreeMonthsInr: number;
+  proMonthlyInr: number;
+  proTwoMonthsInr: number;
+  proThreeMonthsInr: number;
   trialChannels: number;
   creatorChannels: number;
   proChannels: number;
@@ -61,16 +83,16 @@ export async function updatePlanCatalogAction(input: {
     const catalog: AdminPlanCatalog = {
       currency: "USD",
       trialDays: parseIntInRange(input.trialDays, "Trial days", MIN_TRIAL_DAYS, MAX_TRIAL_DAYS),
-      trialPrice: parseUsd(input.trialPrice, "Trial list price"),
+      trialPrice: parseUsd(input.trialPrice, "Trial list price (USD)"),
       CREATOR: {
-        monthly: parseUsd(input.creatorMonthly, "Creator monthly"),
-        twoMonths: parseUsd(input.creatorTwoMonths, "Creator 2 months"),
-        threeMonths: parseUsd(input.creatorThreeMonths, "Creator 3 months"),
+        monthly: parseUsd(input.creatorMonthly, "Creator monthly (USD)"),
+        twoMonths: parseUsd(input.creatorTwoMonths, "Creator 2 months (USD)"),
+        threeMonths: parseUsd(input.creatorThreeMonths, "Creator 3 months (USD)"),
       },
       PRO: {
-        monthly: parseUsd(input.proMonthly, "Pro monthly"),
-        twoMonths: parseUsd(input.proTwoMonths, "Pro 2 months"),
-        threeMonths: parseUsd(input.proThreeMonths, "Pro 3 months"),
+        monthly: parseUsd(input.proMonthly, "Pro monthly (USD)"),
+        twoMonths: parseUsd(input.proTwoMonths, "Pro 2 months (USD)"),
+        threeMonths: parseUsd(input.proThreeMonths, "Pro 3 months (USD)"),
       },
       channelsPerPlatform: {
         TRIAL: parseIntInRange(input.trialChannels, "Trial channels", MIN_CHANNELS, MAX_CHANNELS),
@@ -82,6 +104,19 @@ export async function updatePlanCatalogAction(input: {
         ),
         PRO: parseIntInRange(input.proChannels, "Pro channels", MIN_CHANNELS, MAX_CHANNELS),
       },
+      inr: {
+        trialPrice: parseInr(input.trialPriceInr, "Trial list price (INR)"),
+        CREATOR: {
+          monthly: parseInr(input.creatorMonthlyInr, "Creator monthly (INR)"),
+          twoMonths: parseInr(input.creatorTwoMonthsInr, "Creator 2 months (INR)"),
+          threeMonths: parseInr(input.creatorThreeMonthsInr, "Creator 3 months (INR)"),
+        },
+        PRO: {
+          monthly: parseInr(input.proMonthlyInr, "Pro monthly (INR)"),
+          twoMonths: parseInr(input.proTwoMonthsInr, "Pro 2 months (INR)"),
+          threeMonths: parseInr(input.proThreeMonthsInr, "Pro 3 months (INR)"),
+        },
+      },
     };
 
     await updateBillingPlanSettings({
@@ -92,7 +127,7 @@ export async function updatePlanCatalogAction(input: {
     logAdminAction({
       action: "PLAN_CATALOG_UPDATE",
       adminEmail: session.user?.email!,
-      details: `Trial $${catalog.trialPrice}/${catalog.trialDays}d · Creator $${catalog.CREATOR.monthly}/$${catalog.CREATOR.twoMonths}/$${catalog.CREATOR.threeMonths} · Pro $${catalog.PRO.monthly}/$${catalog.PRO.twoMonths}/$${catalog.PRO.threeMonths} · channels ${catalog.channelsPerPlatform.TRIAL}/${catalog.channelsPerPlatform.CREATOR}/${catalog.channelsPerPlatform.PRO}`,
+      details: `Trial $${catalog.trialPrice}/₹${catalog.inr.trialPrice}/${catalog.trialDays}d · Creator $${catalog.CREATOR.monthly}/₹${catalog.inr.CREATOR.monthly} · Pro $${catalog.PRO.monthly}/₹${catalog.inr.PRO.monthly} · channels ${catalog.channelsPerPlatform.TRIAL}/${catalog.channelsPerPlatform.CREATOR}/${catalog.channelsPerPlatform.PRO}`,
     });
 
     revalidatePath("/admin/plans");
@@ -114,6 +149,13 @@ export async function updatePlanCatalogAction(input: {
       return {
         success: false,
         message: "Apply backend migration V44 (billing_plan_settings) first.",
+        error: "SERVER_ERROR",
+      };
+    }
+    if (code === "ER_BAD_FIELD_ERROR") {
+      return {
+        success: false,
+        message: "Apply backend migration V47 (billing_plan_settings INR columns) first.",
         error: "SERVER_ERROR",
       };
     }
