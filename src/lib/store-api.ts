@@ -1,5 +1,7 @@
 import "server-only";
 
+import { getActiveDbContext } from "@/lib/db";
+
 /**
  * Server-to-server client for the Plugio backend's admin store API.
  * Authenticated with ADMIN_API_KEY; the acting admin's email is sent for the backend audit trail.
@@ -71,9 +73,12 @@ export interface CommissionPolicy {
 export class StoreApiError extends Error {}
 
 async function call<T>(actor: string, path: string, init?: { method?: string; body?: unknown }): Promise<T> {
-  const apiKey = process.env.ADMIN_API_KEY;
+  // Follow the Staging/Production switch: staging talks to the staging backend, production to production.
+  const staging = (await getActiveDbContext()) === "staging";
+  const apiKey = (staging && process.env.STAGING_ADMIN_API_KEY) || process.env.ADMIN_API_KEY;
   if (!apiKey) throw new StoreApiError("ADMIN_API_KEY is not configured");
-  const backend = process.env.BACKEND_API_URL || "http://localhost:8080";
+  const backend =
+    (staging && process.env.STAGING_BACKEND_API_URL) || process.env.BACKEND_API_URL || "http://localhost:8080";
 
   const res = await fetch(`${backend}/api/admin/store${path}`, {
     method: init?.method ?? "GET",
