@@ -140,10 +140,10 @@ export function PlanCatalogEditor({ catalog }: Props) {
       ) : null}
 
       <section className="admin-card p-5 sm:p-6">
-        <h2 className="mb-1 text-[15px] font-semibold tracking-tight text-[var(--ink)]">
+        <h2 className="mb-1 text-[15px] font-semibold tracking-tight text-(--ink)">
           Trial
         </h2>
-        <p className="mb-4 text-[12.5px] text-[var(--ink-soft)]">
+        <p className="mb-4 text-[12.5px] text-(--ink-soft)">
           List price and days. Invite coupons (Coupons desk, max 90%) compute off this list — not a
           hardcoded $0.70 or ₹59.90. INR is an explicit catalog, not FX from USD.
         </p>
@@ -184,13 +184,13 @@ export function PlanCatalogEditor({ catalog }: Props) {
           />
         </div>
         {invitePreview ? (
-          <p className="mt-3 text-[12.5px] font-medium text-[var(--ink-soft)]">
+          <p className="mt-3 text-[12.5px] font-medium text-(--ink-soft)">
             Typical 90% invite: {invitePreview}
           </p>
         ) : null}
       </section>
 
-      <p className="text-[12.5px] font-semibold uppercase tracking-[0.08em] text-[var(--ink-mute)]">
+      <p className="text-[12.5px] font-semibold uppercase tracking-[0.08em] text-(--ink-mute)">
         International (USD)
       </p>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -228,7 +228,7 @@ export function PlanCatalogEditor({ catalog }: Props) {
         />
       </div>
 
-      <p className="text-[12.5px] font-semibold uppercase tracking-[0.08em] text-[var(--ink-mute)]">
+      <p className="text-[12.5px] font-semibold uppercase tracking-[0.08em] text-(--ink-mute)">
         India (INR)
       </p>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -274,7 +274,7 @@ export function PlanCatalogEditor({ catalog }: Props) {
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#FF6719] px-5 text-[13px] font-bold text-white disabled:opacity-60"
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 text-[13px] font-bold text-white disabled:opacity-60"
         >
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
           Save catalog
@@ -325,8 +325,8 @@ function PlanPriceCard({
 
   return (
     <section className="admin-card p-5 sm:p-6">
-      <h2 className="mb-1 text-[15px] font-semibold tracking-tight text-[var(--ink)]">{title}</h2>
-      <p className="mb-4 text-[12.5px] text-[var(--ink-soft)]">
+      <h2 className="mb-1 text-[15px] font-semibold tracking-tight text-(--ink)">{title}</h2>
+      <p className="mb-4 text-[12.5px] text-(--ink-soft)">
         Landing “Save X%” is {was2 != null ? `2 months vs ${formatMoney(was2)}` : "2 months vs monthly × 2"}{" "}
         and {was3 != null ? `3 months vs ${formatMoney(was3)}` : "3 months vs monthly × 3"}. It is not a
         fixed amount.
@@ -397,7 +397,7 @@ function NumberField({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--ink-mute)]">
+      <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
         {label}
       </label>
       <input
@@ -412,7 +412,7 @@ function NumberField({
         disabled={disabled}
         className="admin-input"
       />
-      {hint ? <p className="mt-1 text-[11px] font-medium text-[var(--ink-soft)]">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-[11px] font-medium text-(--ink-soft)">{hint}</p> : null}
     </div>
   );
 }

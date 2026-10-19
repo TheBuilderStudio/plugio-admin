@@ -30,16 +30,16 @@ export default async function AuditLogsPage() {
                 {logs.map((log) => (
                   <tr key={`${log.timestamp}-${log.adminEmail}-${log.action}-${log.targetUserId ?? ""}-${log.details ?? ""}`}>
                     <td className="whitespace-nowrap font-semibold">{log.action.replaceAll("_", " ")}</td>
-                    <td className="whitespace-nowrap text-[var(--ink-soft)]">{log.adminEmail}</td>
+                    <td className="whitespace-nowrap text-(--ink-soft)">{log.adminEmail}</td>
                     <td>
                       {log.targetEmail ? (
                         <span className="rounded-md bg-[#F7F4EE] px-2 py-0.5 text-[12px]">{log.targetEmail}</span>
                       ) : (
-                        <span className="text-[var(--ink-mute)]">—</span>
+                        <span className="text-(--ink-mute)">—</span>
                       )}
                     </td>
-                    <td className="max-w-[280px] text-[12.5px] text-[var(--ink-soft)]">{log.details?.trim() || "—"}</td>
-                    <td className="whitespace-nowrap text-[12px] text-[var(--ink-soft)]">{formatDateTime(log.timestamp)}</td>
+                    <td className="max-w-[280px] text-[12.5px] text-(--ink-soft)">{log.details?.trim() || "—"}</td>
+                    <td className="whitespace-nowrap text-[12px] text-(--ink-soft)">{formatDateTime(log.timestamp)}</td>
                   </tr>
                 ))}
               </tbody>

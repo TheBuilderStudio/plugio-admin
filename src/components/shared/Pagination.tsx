@@ -45,22 +45,22 @@ export function Pagination({
 
   return (
     <div className="flex items-center justify-between px-5 py-3.5">
-      <p className="text-[12.5px] text-[var(--ink-soft)]">
-        {start}–{end} of <span className="font-semibold text-[var(--ink)]">{total}</span>
+      <p className="text-[12.5px] text-(--ink-soft)">
+        {start}–{end} of <span className="font-semibold text-(--ink)">{total}</span>
       </p>
       <div className="flex items-center gap-1">
         {currentPage > 1 ? (
-          <Link href={buildUrl(currentPage - 1)} className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--ink-soft)] hover:bg-[#F7F4EE]">
+          <Link href={buildUrl(currentPage - 1)} className="flex h-8 w-8 items-center justify-center rounded-lg text-(--ink-soft) hover:bg-[#F7F4EE]">
             <ChevronLeft className="h-4 w-4" />
           </Link>
         ) : (
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--ink-mute)] opacity-40">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg text-(--ink-mute) opacity-40">
             <ChevronLeft className="h-4 w-4" />
           </span>
         )}
         {uniquePages.map((page, idx) =>
           page === "..." ? (
-            <span key={`ellipsis-${idx}`} className="flex h-8 w-8 items-center justify-center text-[13px] text-[var(--ink-mute)]">
+            <span key={`ellipsis-${idx}`} className="flex h-8 w-8 items-center justify-center text-[13px] text-(--ink-mute)">
               …
             </span>
           ) : (
@@ -70,8 +70,8 @@ export function Pagination({
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-lg text-[13px] font-semibold transition",
                 page === currentPage
-                  ? "bg-[#FF6719] text-white"
-                  : "text-[var(--ink-soft)] hover:bg-[#F7F4EE]"
+                  ? "bg-brand-500 text-white"
+                  : "text-(--ink-soft) hover:bg-[#F7F4EE]"
               )}
             >
               {page}
@@ -79,11 +79,11 @@ export function Pagination({
           )
         )}
         {currentPage < totalPages ? (
-          <Link href={buildUrl(currentPage + 1)} className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--ink-soft)] hover:bg-[#F7F4EE]">
+          <Link href={buildUrl(currentPage + 1)} className="flex h-8 w-8 items-center justify-center rounded-lg text-(--ink-soft) hover:bg-[#F7F4EE]">
             <ChevronRight className="h-4 w-4" />
           </Link>
         ) : (
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--ink-mute)] opacity-40">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg text-(--ink-mute) opacity-40">
             <ChevronRight className="h-4 w-4" />
           </span>
         )}

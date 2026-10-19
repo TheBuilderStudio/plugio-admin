@@ -14,7 +14,7 @@
  */
 
 import { revalidatePath } from "next/cache";
-import { requireWritableAdmin } from "@/lib/security";
+import { requireWritableAdmin, getAdminEmail } from "@/lib/security";
 import { validateUserId } from "@/lib/validation";
 import {
   approveBetaUser,
@@ -72,7 +72,7 @@ export async function approveBetaAction(
     // 5. Log the action
     logAdminAction({
       action: "BETA_APPROVE",
-      adminEmail: session.user?.email!,
+      adminEmail: getAdminEmail(session),
       targetUserId: validUserId,
       targetEmail: targetUser.email,
       details: `Approved beta access for ${targetUser.name ?? targetUser.email}`,
@@ -137,7 +137,7 @@ export async function rejectBetaAction(userId: string): Promise<ActionResult> {
     // 5. Log the action
     logAdminAction({
       action: "BETA_REJECT",
-      adminEmail: session.user?.email!,
+      adminEmail: getAdminEmail(session),
       targetUserId: validUserId,
       targetEmail: targetUser.email,
       details: `Rejected beta access for ${targetUser.name ?? targetUser.email}`,

@@ -14,16 +14,16 @@ export function CouponRedemptionsTable({
 }: CouponRedemptionsTableProps) {
   return (
     <section className="admin-card overflow-hidden">
-      <div className="border-b border-[var(--line)] px-5 py-4">
-        <h2 className="text-[15px] font-semibold tracking-tight text-[var(--ink)]">
+      <div className="border-b border-(--line) px-5 py-4">
+        <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">
           Recent redemptions
         </h2>
-        <p className="mt-0.5 text-[12.5px] text-[var(--ink-soft)]">
+        <p className="mt-0.5 text-[12.5px] text-(--ink-soft)">
           Who used which code — trial vs paid checkout.
         </p>
       </div>
       {redemptions.length === 0 ? (
-        <p className="px-5 py-10 text-center text-[13px] text-[var(--ink-mute)]">
+        <p className="px-5 py-10 text-center text-[13px] text-(--ink-mute)">
           No coupon redemptions yet.
         </p>
       ) : (
@@ -42,28 +42,28 @@ export function CouponRedemptionsTable({
               {redemptions.map((row) => (
                 <tr key={row.id}>
                   <td>
-                    <code className="rounded-md bg-orange-50 px-1.5 py-0.5 font-mono text-[12px] font-semibold text-[#FF6719]">
+                    <code className="rounded-md bg-orange-50 px-1.5 py-0.5 font-mono text-[12px] font-semibold text-brand-500">
                       {row.coupon_code}
                     </code>
                   </td>
-                  <td className="font-semibold text-[var(--ink)]">
+                  <td className="font-semibold text-(--ink)">
                     {row.kind === "TRIAL" ? "Trial" : row.kind === "PRO" ? "Pro" : "Creator"}
                   </td>
                   <td>
                     <Link
                       href={`/admin/users/${row.user_id}`}
-                      className="font-semibold text-[var(--ink)] hover:text-[#FF6719]"
+                      className="font-semibold text-(--ink) hover:text-brand-500"
                     >
                       {row.user_name || row.user_email || row.user_id.slice(0, 8)}
                     </Link>
                     {row.user_email ? (
-                      <p className="mt-0.5 text-[12px] text-[var(--ink-soft)]">{row.user_email}</p>
+                      <p className="mt-0.5 text-[12px] text-(--ink-soft)">{row.user_email}</p>
                     ) : null}
                   </td>
-                  <td className="whitespace-nowrap font-semibold tabular-nums text-[var(--ink)]">
+                  <td className="whitespace-nowrap font-semibold tabular-nums text-(--ink)">
                     {formatPayableMinor(row.payable_cents, row.currency)}
                   </td>
-                  <td className="whitespace-nowrap text-[var(--ink-soft)]">
+                  <td className="whitespace-nowrap text-(--ink-soft)">
                     {formatDateTime(row.redeemed_at)}
                   </td>
                 </tr>

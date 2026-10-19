@@ -541,11 +541,11 @@ export const getAdminOverview = unstable_cache(
 
 /** Call from mutating server actions so Overview refreshes without waiting TTL. */
 export function invalidateAdminOverview(): void {
-  revalidateTag(OVERVIEW_TAG);
-  revalidateTag("dashboard");
-  revalidateTag("users");
-  revalidateTag("beta");
-  revalidateTag("billing");
-  revalidateTag("coupons");
-  revalidateTag("payments");
+  revalidateTag(OVERVIEW_TAG, { expire: 0 });
+  revalidateTag("dashboard", { expire: 0 });
+  revalidateTag("users", { expire: 0 });
+  revalidateTag("beta", { expire: 0 });
+  revalidateTag("billing", { expire: 0 });
+  revalidateTag("coupons", { expire: 0 });
+  revalidateTag("payments", { expire: 0 });
 }

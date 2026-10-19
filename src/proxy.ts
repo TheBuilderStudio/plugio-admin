@@ -1,5 +1,5 @@
 /**
- * Plugio Admin — Middleware
+ * Plugio Admin — Proxy (formerly middleware)
  *
  * Protects all /admin/** routes.
  *
@@ -21,11 +21,13 @@ export default auth((req) => {
   const session = req.auth;
   const email = session?.user?.email;
 
-  // Allow Next.js internals and static files
+  // Allow Next.js internals and static files. Protected prefixes are excluded from the
+  // "contains a dot" shortcut so a crafted path such as /admin/x.y cannot skip the auth checks below.
+  const isProtectedPath = pathname.startsWith("/admin") || pathname.startsWith("/api/");
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
-    pathname.includes(".")
+    (!isProtectedPath && pathname.includes("."))
   ) {
     return NextResponse.next();
   }

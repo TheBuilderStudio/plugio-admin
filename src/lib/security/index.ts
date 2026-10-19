@@ -42,6 +42,18 @@ export async function requireAdmin(): Promise<Session> {
 }
 
 /**
+ * Email of the admin behind a session returned by requireAdmin()/requireWritableAdmin(),
+ * for audit logging. Throws instead of asserting non-null if the session has no email.
+ */
+export function getAdminEmail(session: Session): string {
+  const email = normalizeAdminEmail(session.user?.email);
+  if (!email) {
+    throw new Error("UNAUTHORIZED: Session has no admin email");
+  }
+  return email;
+}
+
+/**
  * Server-side read-only gate. UI flags alone are not enough — every mutating
  * server action must call this after requireAdmin().
  */

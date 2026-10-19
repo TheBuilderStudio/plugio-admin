@@ -37,7 +37,7 @@ export default async function AdminLayout({
 
   return (
     <AdminReadOnlyProvider isReadOnly={isReadOnly}>
-      <div className="relative isolate flex h-dvh overflow-hidden bg-[var(--canvas)]">
+      <div className="relative isolate flex h-dvh overflow-hidden bg-(--canvas)">
         <AdminSidebar
           adminName={session.user.name}
           adminEmail={session.user.email}

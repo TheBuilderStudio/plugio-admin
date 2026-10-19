@@ -5,7 +5,7 @@
  */
 
 import { revalidatePath } from "next/cache";
-import { requireWritableAdmin } from "@/lib/security";
+import { requireWritableAdmin, getAdminEmail } from "@/lib/security";
 import { validateCouponCode, ValidationError } from "@/lib/validation";
 import {
   createPlanCoupon,
@@ -127,7 +127,7 @@ export async function createCouponAction(input: {
 
     logAdminAction({
       action: "COUPON_CREATE",
-      adminEmail: session.user?.email!,
+      adminEmail: getAdminEmail(session),
       details: `Created coupon ${code} (${percentOff}% off)${maxRedemptions ? ` (max ${maxRedemptions})` : " (unlimited)"}`,
     });
 
@@ -238,7 +238,7 @@ export async function updateCouponAction(input: {
 
     logAdminAction({
       action: "COUPON_UPDATE",
-      adminEmail: session.user?.email!,
+      adminEmail: getAdminEmail(session),
       details: `Updated coupon ${input.id}: ${JSON.stringify(updates)}`,
     });
 
@@ -326,7 +326,7 @@ export async function createPlanCouponAction(input: {
 
     logAdminAction({
       action: "PLAN_COUPON_CREATE",
-      adminEmail: session.user?.email!,
+      adminEmail: getAdminEmail(session),
       details: `Created ${input.plan} coupon ${code} (${percentOff}% off)`,
     });
 
@@ -426,7 +426,7 @@ export async function updatePlanCouponAction(input: {
 
     logAdminAction({
       action: "PLAN_COUPON_UPDATE",
-      adminEmail: session.user?.email!,
+      adminEmail: getAdminEmail(session),
       details: `Updated plan coupon ${input.id}: ${JSON.stringify({
         ...updates,
         expiresAt: updates.expiresAt?.toISOString(),
@@ -463,7 +463,7 @@ export async function setPlanCouponActiveAction(
     }
     logAdminAction({
       action: active ? "PLAN_COUPON_ACTIVATE" : "PLAN_COUPON_DEACTIVATE",
-      adminEmail: session.user?.email!,
+      adminEmail: getAdminEmail(session),
       details: `${active ? "Activated" : "Deactivated"} plan coupon ${id}`,
     });
     revalidateCouponViews();
@@ -505,7 +505,7 @@ export async function setCouponActiveAction(
 
     logAdminAction({
       action: active ? "COUPON_ACTIVATE" : "COUPON_DEACTIVATE",
-      adminEmail: session.user?.email!,
+      adminEmail: getAdminEmail(session),
       details: `${active ? "Activated" : "Deactivated"} coupon ${id}`,
     });
 

@@ -23,7 +23,6 @@ export interface DbUser {
   email: string;
   name: string | null;
   picture: string | null;
-  bio: string | null;
   username: string | null;
   is_public: boolean;
   niche: string | null;
@@ -311,6 +310,11 @@ export interface AdminAuditLog {
     | "PLAN_COUPON_DEACTIVATE"
     | "PLAN_CATALOG_UPDATE"
     | "BILLING_REVOKE"
+    | "STORE_PAYOUT_PAID"
+    | "STORE_PAYOUT_REJECT"
+    | "STORE_REFUND"
+    | "STORE_PRODUCT_SUSPEND"
+    | "STORE_PRODUCT_UNSUSPEND"
     // Legacy — kept for reading old audit logs; do not emit new entries
     | "BILLING_GRANT"
     | "BILLING_GRANT_EXTEND"

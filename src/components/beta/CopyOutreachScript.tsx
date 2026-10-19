@@ -21,13 +21,13 @@ export function CopyOutreachScript({ script, couponCode }: Props) {
   const mailto = `mailto:?subject=${encodeURIComponent("You're in Plugio beta")}&body=${encodeURIComponent(script)}`;
 
   return (
-    <div className="space-y-3 rounded-xl border border-[var(--line)] bg-[var(--paper)] p-4">
+    <div className="space-y-3 rounded-xl border border-(--line) bg-(--paper) p-4">
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#FF6719]">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-500">
           Send this now
         </p>
         {couponCode ? (
-          <p className="mt-1 text-[13px] font-medium text-[var(--ink)]">
+          <p className="mt-1 text-[13px] font-medium text-(--ink)">
             Coupon in script: <span className="font-mono font-semibold">{couponCode}</span>
           </p>
         ) : (

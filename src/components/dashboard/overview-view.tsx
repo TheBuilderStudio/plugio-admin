@@ -55,7 +55,7 @@ export function OverviewView({
   const queueBusy = pendingQueue.length > 0;
 
   return (
-    <AdminPage className="!max-w-[1360px] !space-y-4">
+    <AdminPage className="max-w-[1360px]! space-y-4!">
       {loadError ? (
         <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-medium text-amber-950">
           {loadError}
@@ -63,11 +63,11 @@ export function OverviewView({
       ) : null}
 
       {!queueBusy ? (
-        <div className="flex items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--paper)] px-4 py-2.5 shadow-[var(--shadow-paper)]">
-          <p className="text-[13px] text-[var(--ink-soft)]">
+        <div className="flex items-center justify-between gap-3 rounded-[14px] border border-(--line) bg-(--paper) px-4 py-2.5 shadow-(--shadow-paper)">
+          <p className="text-[13px] text-(--ink-soft)">
             Queue is clear{firstName ? `, ${firstName}` : ""}. Nobody is waiting for access.
           </p>
-          <Link href="/admin/beta?status=PENDING" className="text-[12.5px] font-semibold text-[#FF6719]">
+          <Link href="/admin/beta?status=PENDING" className="text-[12.5px] font-semibold text-brand-500">
             Open queue
           </Link>
         </div>
@@ -76,18 +76,18 @@ export function OverviewView({
       <div className={cn("grid grid-cols-1 gap-4", queueBusy && "xl:grid-cols-12")}>
         {queueBusy ? (
           <AdminCard padded={false} className="xl:col-span-7">
-            <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] px-5 py-3">
+            <div className="flex items-center justify-between gap-3 border-b border-(--line) px-5 py-3">
               <div>
-                <h2 className="text-[15px] font-semibold tracking-tight text-[var(--ink)]">Queue</h2>
-                <p className="text-[12.5px] text-[var(--ink-soft)]">
+                <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Queue</h2>
+                <p className="text-[12.5px] text-(--ink-soft)">
                   {attention.pending_beta} waiting — approve is access, not a plan
                 </p>
               </div>
-              <Link href="/admin/beta?status=PENDING" className="text-[12.5px] font-semibold text-[#FF6719]">
+              <Link href="/admin/beta?status=PENDING" className="text-[12.5px] font-semibold text-brand-500">
                 Review all
               </Link>
             </div>
-            <ul className="divide-y divide-[var(--line)]">
+            <ul className="divide-y divide-(--line)">
               {pendingQueue.map((req) => (
                 <li key={req.id}>
                   <Link
@@ -96,15 +96,15 @@ export function OverviewView({
                   >
                     <Avatar src={req.picture} name={req.name} />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13.5px] font-semibold text-[var(--ink)]">
+                      <p className="truncate text-[13.5px] font-semibold text-(--ink)">
                         {req.name ?? "Unknown"}
                       </p>
-                      <p className="truncate text-[12px] text-[var(--ink-soft)]">{req.email}</p>
+                      <p className="truncate text-[12px] text-(--ink-soft)">{req.email}</p>
                     </div>
-                    <p className="hidden max-w-[200px] truncate text-[12px] text-[var(--ink-soft)] sm:block">
+                    <p className="hidden max-w-[200px] truncate text-[12px] text-(--ink-soft) sm:block">
                       {socialLine(req)}
                     </p>
-                    <span className="shrink-0 text-[11px] font-medium text-[var(--ink-mute)]">
+                    <span className="shrink-0 text-[11px] font-medium text-(--ink-mute)">
                       {formatRelativeTime(req.beta_application_submitted_at)}
                     </span>
                   </Link>
@@ -115,62 +115,62 @@ export function OverviewView({
         ) : null}
 
         <AdminCard padded={false} className={queueBusy ? "xl:col-span-5" : undefined}>
-          <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] px-5 py-3">
+          <div className="flex items-center justify-between gap-3 border-b border-(--line) px-5 py-3">
             <div>
-              <h2 className="text-[15px] font-semibold tracking-tight text-[var(--ink)]">Money</h2>
-              <p className="text-[12.5px] text-[var(--ink-soft)]">Prepaid · last 30 days</p>
+              <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Money</h2>
+              <p className="text-[12.5px] text-(--ink-soft)">Prepaid · last 30 days</p>
             </div>
             <div className="flex gap-3">
-              <Link href="/admin/plans" className="text-[12.5px] font-semibold text-[#FF6719]">
+              <Link href="/admin/plans" className="text-[12.5px] font-semibold text-brand-500">
                 Plans
               </Link>
-              <Link href="/admin/payments" className="text-[12.5px] font-semibold text-[#FF6719]">
+              <Link href="/admin/payments" className="text-[12.5px] font-semibold text-brand-500">
                 Payments
               </Link>
-              <Link href="/admin/coupons" className="text-[12.5px] font-semibold text-[#FF6719]">
+              <Link href="/admin/coupons" className="text-[12.5px] font-semibold text-brand-500">
                 Coupons
               </Link>
             </div>
           </div>
-          <div className={cn("grid gap-px bg-[var(--line)]", queueBusy ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-4")}>
-            <div className="bg-[var(--paper)] px-5 py-4">
-              <p className="text-[11px] font-medium text-[var(--ink-mute)]">Collected (30d)</p>
-              <p className="mt-1 text-[22px] font-semibold tabular-nums tracking-tight text-[var(--ink)]">
+          <div className={cn("grid gap-px bg-(--line)", queueBusy ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-4")}>
+            <div className="bg-(--paper) px-5 py-4">
+              <p className="text-[11px] font-medium text-(--ink-mute)">Collected (30d)</p>
+              <p className="mt-1 text-[22px] font-semibold tabular-nums tracking-tight text-(--ink)">
                 {formatInr(revenue.collected_30d_inr)}
               </p>
-              <p className="mt-0.5 text-[13px] font-semibold tabular-nums text-[var(--ink)]">
+              <p className="mt-0.5 text-[13px] font-semibold tabular-nums text-(--ink)">
                 {formatUsd(revenue.collected_30d_usd)}
               </p>
-              <p className="mt-0.5 text-[12px] text-[var(--ink-soft)]">
+              <p className="mt-0.5 text-[12px] text-(--ink-soft)">
                 {revenue.paid_checkouts_30d_inr} INR · {revenue.paid_checkouts_30d} USD invoices
                 · all-time {formatInr(revenue.total_collected_inr)} · {formatUsd(revenue.total_collected_usd)}
               </p>
             </div>
-            <div className="bg-[var(--paper)] px-5 py-4">
-              <p className="text-[11px] font-medium text-[var(--ink-mute)]">Est. MRR (USD list)</p>
-              <p className="mt-1 text-[22px] font-semibold tabular-nums tracking-tight text-[var(--ink)]">
+            <div className="bg-(--paper) px-5 py-4">
+              <p className="text-[11px] font-medium text-(--ink-mute)">Est. MRR (USD list)</p>
+              <p className="mt-1 text-[22px] font-semibold tabular-nums tracking-tight text-(--ink)">
                 {formatUsd(revenue.estimated_mrr_usd)}
               </p>
-              <p className="mt-0.5 text-[12px] text-[var(--ink-soft)]">
+              <p className="mt-0.5 text-[12px] text-(--ink-soft)">
                 Live paid plans · USD catalog (seats are not currency-tagged)
               </p>
             </div>
-            <div className="bg-[var(--paper)] px-5 py-4">
-              <p className="text-[11px] font-medium text-[var(--ink-mute)]">Paid</p>
-              <p className="mt-1 text-[22px] font-semibold tabular-nums tracking-tight text-[var(--ink)]">
+            <div className="bg-(--paper) px-5 py-4">
+              <p className="text-[11px] font-medium text-(--ink-mute)">Paid</p>
+              <p className="mt-1 text-[22px] font-semibold tabular-nums tracking-tight text-(--ink)">
                 {paidLive}
               </p>
-              <p className="mt-0.5 text-[12px] text-[var(--ink-soft)]">
+              <p className="mt-0.5 text-[12px] text-(--ink-soft)">
                 {plans.active_creator} Creator · {plans.active_pro} Pro
               </p>
             </div>
-            <div className="bg-[var(--paper)] px-5 py-4">
-              <p className="text-[11px] font-medium text-[var(--ink-mute)]">Trial / none</p>
-              <p className="mt-1 text-[22px] font-semibold tabular-nums tracking-tight text-[var(--ink)]">
+            <div className="bg-(--paper) px-5 py-4">
+              <p className="text-[11px] font-medium text-(--ink-mute)">Trial / none</p>
+              <p className="mt-1 text-[22px] font-semibold tabular-nums tracking-tight text-(--ink)">
                 {plans.trialing}
-                <span className="text-[15px] font-medium text-[var(--ink-mute)]"> / {plans.none}</span>
+                <span className="text-[15px] font-medium text-(--ink-mute)"> / {plans.none}</span>
               </p>
-              <p className="mt-0.5 text-[12px] text-[var(--ink-soft)]">
+              <p className="mt-0.5 text-[12px] text-(--ink-soft)">
                 {coupons.redemptions_7d} coupons / 7d · {plans.expired} expired
               </p>
             </div>
@@ -179,12 +179,12 @@ export function OverviewView({
       </div>
 
       <AdminCard padded={false}>
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] px-5 py-3.5">
+        <div className="flex items-center justify-between gap-3 border-b border-(--line) px-5 py-3.5">
           <div>
-            <h2 className="text-[15px] font-semibold tracking-tight text-[var(--ink)]">Pipeline</h2>
-            <p className="text-[12.5px] text-[var(--ink-soft)]">Who can use Plugio</p>
+            <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Pipeline</h2>
+            <p className="text-[12.5px] text-(--ink-soft)">Who can use Plugio</p>
           </div>
-          <Link href="/admin/users" className="text-[12.5px] font-semibold text-[#FF6719]">
+          <Link href="/admin/users" className="text-[12.5px] font-semibold text-brand-500">
             Users
           </Link>
         </div>
@@ -205,17 +205,17 @@ export function OverviewView({
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
         <AdminCard padded={false} className="h-fit self-start lg:col-span-7">
-          <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] px-5 py-3.5">
-            <h2 className="text-[15px] font-semibold tracking-tight text-[var(--ink)]">Platform</h2>
+          <div className="flex items-center justify-between gap-3 border-b border-(--line) px-5 py-3.5">
+            <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Platform</h2>
             {incidents.length > 0 ? (
               <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
                 {incidents.length} issue{incidents.length === 1 ? "" : "s"}
               </span>
             ) : (
-              <span className="text-[12px] font-medium text-[var(--ink-mute)]">Healthy</span>
+              <span className="text-[12px] font-medium text-(--ink-mute)">Healthy</span>
             )}
           </div>
-          <div className="grid grid-cols-1 gap-px bg-[var(--line)] md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-px bg-(--line) md:grid-cols-3">
             <PlatformBlock
               title="Social"
               rows={[
@@ -234,8 +234,8 @@ export function OverviewView({
               ]}
               footer={`${content.created_7d} created / 7d`}
             />
-            <div className="bg-[var(--paper)] p-5">
-              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--ink-mute)]">
+            <div className="bg-(--paper) p-5">
+              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
                 Watch
               </p>
               <ul className="mt-3 space-y-2.5">
@@ -244,7 +244,7 @@ export function OverviewView({
                 <WatchRow label="Pay failed / 7d" value={attention.payment_failures_7d} href="/admin/payments" />
               </ul>
               {incidents.length > 0 ? (
-                <ul className="mt-4 space-y-1 border-t border-[var(--line)] pt-3">
+                <ul className="mt-4 space-y-1 border-t border-(--line) pt-3">
                   {incidents.map((item) => (
                     <li key={item.label}>
                       <Link href={item.href} className="text-[12px] font-medium text-amber-800 hover:underline">
@@ -259,23 +259,23 @@ export function OverviewView({
         </AdminCard>
 
         <AdminCard padded={false} className="flex w-full flex-col self-start lg:col-span-5">
-          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--line)] px-5 py-3.5">
-            <h2 className="text-[15px] font-semibold tracking-tight text-[var(--ink)]">Live</h2>
-            <Link href="/admin/audit" className="text-[12.5px] font-semibold text-[#FF6719]">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-(--line) px-5 py-3.5">
+            <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Live</h2>
+            <Link href="/admin/audit" className="text-[12.5px] font-semibold text-brand-500">
               Audit
             </Link>
           </div>
           {feed.length === 0 ? (
-            <p className="px-5 py-10 text-center text-[13px] text-[var(--ink-mute)]">No recent movement</p>
+            <p className="px-5 py-10 text-center text-[13px] text-(--ink-mute)">No recent movement</p>
           ) : (
-            <ul className="custom-scrollbar max-h-[22rem] divide-y divide-[var(--line)] overflow-y-auto">
+            <ul className="custom-scrollbar max-h-88 divide-y divide-(--line) overflow-y-auto">
               {feed.map((item) => (
                 <li key={item.key} className="flex items-start justify-between gap-3 px-5 py-2.5">
                   <div className="min-w-0">
-                    <p className="truncate text-[13px] font-semibold text-[var(--ink)]">{item.title}</p>
-                    <p className="truncate text-[12px] text-[var(--ink-soft)]">{item.detail}</p>
+                    <p className="truncate text-[13px] font-semibold text-(--ink)">{item.title}</p>
+                    <p className="truncate text-[12px] text-(--ink-soft)">{item.detail}</p>
                   </div>
-                  <span className="shrink-0 text-[11px] font-medium text-[var(--ink-mute)]">{item.ago}</span>
+                  <span className="shrink-0 text-[11px] font-medium text-(--ink-mute)">{item.ago}</span>
                 </li>
               ))}
             </ul>
@@ -337,14 +337,14 @@ function socialLine(req: BetaRequestRow) {
 function Avatar({ src, name }: { src: string | null; name: string | null }) {
   if (src) {
     return (
-      <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-[var(--line)]">
+      <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-(--line)">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={src} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
       </div>
     );
   }
   return (
-    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FF6719]/10 text-[11px] font-bold text-[#FF6719]">
+    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 text-[11px] font-bold text-brand-500">
       {getInitials(name)}
     </div>
   );
@@ -365,12 +365,12 @@ function PipeCell({
     <Link
       href={href}
       className={cn(
-        "border-b border-[var(--line)] px-5 py-4 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0",
+        "border-b border-(--line) px-5 py-4 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0",
         warn && "bg-amber-50/80"
       )}
     >
-      <p className="text-[11px] font-medium text-[var(--ink-mute)]">{label}</p>
-      <p className={cn("mt-1 text-[22px] font-semibold tabular-nums tracking-tight", warn ? "text-amber-900" : "text-[var(--ink)]")}>
+      <p className="text-[11px] font-medium text-(--ink-mute)">{label}</p>
+      <p className={cn("mt-1 text-[22px] font-semibold tabular-nums tracking-tight", warn ? "text-amber-900" : "text-(--ink)")}>
         {value.toLocaleString()}
       </p>
     </Link>
@@ -387,23 +387,23 @@ function PlatformBlock({
   footer: string;
 }) {
   return (
-    <div className="bg-[var(--paper)] p-5">
-      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--ink-mute)]">{title}</p>
+    <div className="bg-(--paper) p-5">
+      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">{title}</p>
       <ul className="mt-3 space-y-2">
         {rows.map((row) => {
           const Icon = row.icon;
           return (
             <li key={row.label} className="flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1.5 text-[13px] text-[var(--ink-soft)]">
+              <span className="inline-flex items-center gap-1.5 text-[13px] text-(--ink-soft)">
                 {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
                 {row.label}
               </span>
-              <span className="text-[13px] font-semibold tabular-nums text-[var(--ink)]">{row.value}</span>
+              <span className="text-[13px] font-semibold tabular-nums text-(--ink)">{row.value}</span>
             </li>
           );
         })}
       </ul>
-      <p className="mt-3 text-[11px] text-[var(--ink-mute)]">{footer}</p>
+      <p className="mt-3 text-[11px] text-(--ink-mute)">{footer}</p>
     </div>
   );
 }
@@ -413,8 +413,8 @@ function WatchRow({ label, value, href }: { label: string; value: number; href: 
   return (
     <li>
       <Link href={href} className="flex items-center justify-between gap-2">
-        <span className="text-[13px] text-[var(--ink-soft)]">{label}</span>
-        <span className={cn("text-[13px] font-semibold tabular-nums", hot ? "text-amber-800" : "text-[var(--ink)]")}>
+        <span className="text-[13px] text-(--ink-soft)">{label}</span>
+        <span className={cn("text-[13px] font-semibold tabular-nums", hot ? "text-amber-800" : "text-(--ink)")}>
           {value}
         </span>
       </Link>

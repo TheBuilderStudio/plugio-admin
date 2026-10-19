@@ -34,7 +34,7 @@ export default async function PlansPage() {
   return (
     <AdminPage>
       <div className="mb-5 max-w-2xl">
-        <p className="text-[13px] leading-relaxed text-[var(--ink-soft)]">
+        <p className="text-[13px] leading-relaxed text-(--ink-soft)">
           This is the commercial catalog. Checkout, landing prices, save percentages, and channel
           limits all read this row. USD is international; INR is India — not converted from USD.
           Coupons (percent off) stay on the Coupons desk. Enable UPI, cards, netbanking, and

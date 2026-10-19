@@ -49,11 +49,11 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
                           ) : log.status === "FAILED" ? (
                             <XCircle className="h-4 w-4 text-red-600" />
                           ) : (
-                            <Receipt className="h-4 w-4 text-[var(--ink-mute)]" />
+                            <Receipt className="h-4 w-4 text-(--ink-mute)" />
                           )}
                           <div>
                             <p className="font-semibold">{log.event_type}</p>
-                            <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--ink-mute)]">
+                            <p className="text-[11px] font-medium uppercase tracking-wide text-(--ink-mute)">
                               {log.status}
                             </p>
                           </div>
@@ -62,22 +62,22 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
                       <td>
                         {log.user_id ? (
                           <div>
-                            <Link href={`/admin/users/${log.user_id}`} className="font-semibold text-[#FF6719] hover:underline">
+                            <Link href={`/admin/users/${log.user_id}`} className="font-semibold text-brand-500 hover:underline">
                               {log.user_name || "Unknown"}
                             </Link>
-                            <p className="text-[12px] text-[var(--ink-soft)]">{log.user_email}</p>
+                            <p className="text-[12px] text-(--ink-soft)">{log.user_email}</p>
                           </div>
                         ) : (
-                          <span className="text-[var(--ink-mute)]">Unlinked</span>
+                          <span className="text-(--ink-mute)">Unlinked</span>
                         )}
                       </td>
                       <td>
                         <code className="rounded-md bg-[#F7F4EE] px-1.5 py-0.5 text-[11px]">{log.provider}</code>
                         {log.order_id ? (
-                          <p className="mt-1 font-mono text-[11px] text-[var(--ink-mute)]">{log.order_id}</p>
+                          <p className="mt-1 font-mono text-[11px] text-(--ink-mute)">{log.order_id}</p>
                         ) : null}
                       </td>
-                      <td className="whitespace-nowrap text-[var(--ink-soft)]">
+                      <td className="whitespace-nowrap text-(--ink-soft)">
                         {formatDateTime(log.created_at)}
                       </td>
                     </tr>
@@ -86,7 +86,7 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
               </table>
             </div>
             {result.totalPages > 1 && (
-              <div className="border-t border-[var(--line)]">
+              <div className="border-t border-(--line)">
                 <Pagination
                   currentPage={result.page}
                   totalPages={result.totalPages}

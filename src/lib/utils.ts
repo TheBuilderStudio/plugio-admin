@@ -89,3 +89,8 @@ export function truncate(text: string | null | undefined, max: number): string {
   if (text.length <= max) return text;
   return text.slice(0, max) + "…";
 }
+
+/** Whole days from now until `date`, rounded up and never negative. */
+export function daysUntil(date: Date): number {
+  return Math.max(0, Math.ceil((date.getTime() - Date.now()) / 86_400_000));
+}

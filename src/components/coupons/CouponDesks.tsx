@@ -27,14 +27,14 @@ export function CouponDesks({
 
   return (
     <div className="space-y-5">
-      <div className="inline-flex items-center gap-1 rounded-xl border border-[var(--line)] bg-[#F7F4EE] p-1">
+      <div className="inline-flex items-center gap-1 rounded-xl border border-(--line) bg-[#F7F4EE] p-1">
         <button
           type="button"
           onClick={() => setDesk("trial")}
           className={`rounded-lg px-3 py-2 text-[12.5px] font-semibold ${
             desk === "trial"
-              ? "bg-white text-[var(--ink)] shadow-sm"
-              : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
+              ? "bg-white text-(--ink) shadow-xs"
+              : "text-(--ink-soft) hover:text-(--ink)"
           }`}
         >
           Trial
@@ -44,8 +44,8 @@ export function CouponDesks({
           onClick={() => setDesk("paid")}
           className={`rounded-lg px-3 py-2 text-[12.5px] font-semibold ${
             desk === "paid"
-              ? "bg-white text-[var(--ink)] shadow-sm"
-              : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
+              ? "bg-white text-(--ink) shadow-xs"
+              : "text-(--ink-soft) hover:text-(--ink)"
           }`}
         >
           Creator / Pro
@@ -54,7 +54,7 @@ export function CouponDesks({
 
       {desk === "trial" ? (
         <div className="space-y-3">
-          <p className="text-[13px] text-[var(--ink-soft)]">
+          <p className="text-[13px] text-(--ink-soft)">
             Access via beta. Trial is {formatUsd(catalog.trialPrice)} /{" "}
             {formatInr((catalog.inr ?? PLAN_CATALOG_USD.inr).trialPrice)} for {catalog.trialDays}{" "}
             days of the Creator workspace. Coupons are created here only — maximum 90% off. Every
@@ -65,7 +65,7 @@ export function CouponDesks({
         </div>
       ) : (
         <div className="space-y-3">
-          <p className="text-[13px] text-[var(--ink-soft)]">
+          <p className="text-[13px] text-(--ink-soft)">
             Creator and Pro coupons are created here only. Maximum 90% off list. Every term still pays through Razorpay.
           </p>
           <PlanCouponManager coupons={planCoupons} schemaAvailable={planSchemaAvailable} catalog={catalog} />

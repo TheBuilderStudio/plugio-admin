@@ -40,7 +40,7 @@ export default async function BetaPage({ searchParams }: BetaPageProps) {
   return (
     <AdminPage>
       <AdminCard padded={false}>
-        <div className="flex flex-col gap-3 border-b border-[var(--line)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-b border-(--line) px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <FilterPills
             items={tabs.map((tab) => ({
               href: buildTabUrl(tab.value),
@@ -51,7 +51,7 @@ export default async function BetaPage({ searchParams }: BetaPageProps) {
           <div className="flex items-center gap-2">
             <form method="GET" className="relative min-w-[200px] flex-1 sm:w-[240px] sm:flex-none">
               <input type="hidden" name="status" value={status} />
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--ink-mute)]" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-(--ink-mute)" />
               <input
                 type="search"
                 name="search"
@@ -77,7 +77,7 @@ export default async function BetaPage({ searchParams }: BetaPageProps) {
           />
         ) : (
           <>
-            <ul className="divide-y divide-[var(--line)]">
+            <ul className="divide-y divide-(--line)">
               {result.items.map((req) => {
                 const pending = req.access_status === "PENDING" || !req.access_status;
                 return (
@@ -85,33 +85,33 @@ export default async function BetaPage({ searchParams }: BetaPageProps) {
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
                       <div className="flex min-w-0 flex-1 gap-3">
                         {req.picture ? (
-                          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-[var(--line)]">
+                          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-(--line)">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={req.picture} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                           </div>
                         ) : (
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#FF6719]/10 font-bold text-[#FF6719]">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 font-bold text-brand-500">
                             {getInitials(req.name)}
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <Link href={`/admin/users/${req.id}`} className="truncate text-[14px] font-semibold text-[var(--ink)] hover:text-[#FF6719]">
+                            <Link href={`/admin/users/${req.id}`} className="truncate text-[14px] font-semibold text-(--ink) hover:text-brand-500">
                               {req.name ?? "Unknown"}
                             </Link>
                             {!pending ? <StatusBadge status={req.access_status} /> : null}
-                            <span className="text-[12px] text-[var(--ink-mute)]">
+                            <span className="text-[12px] text-(--ink-mute)">
                               {formatRelativeTime(req.beta_application_submitted_at)}
                             </span>
                           </div>
-                          <p className="truncate text-[12.5px] text-[var(--ink-soft)]">{req.email}</p>
-                          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-[var(--ink-soft)]">
+                          <p className="truncate text-[12.5px] text-(--ink-soft)">{req.email}</p>
+                          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-(--ink-soft)">
                             <SocialBit icon={Instagram} handle={req.instagram_username} followers={req.instagram_followers} />
                             <SocialBit icon={Youtube} handle={req.youtube_channel} followers={req.youtube_followers} />
                             <SocialBit icon={Facebook} handle={req.facebook_page} followers={req.facebook_followers} />
                           </div>
                           {req.application_message ? (
-                            <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-[var(--ink)]">
+                            <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-(--ink)">
                               {req.application_message}
                             </p>
                           ) : null}
@@ -132,7 +132,7 @@ export default async function BetaPage({ searchParams }: BetaPageProps) {
               })}
             </ul>
             {result.totalPages > 1 && (
-              <div className="border-t border-[var(--line)]">
+              <div className="border-t border-(--line)">
                 <Pagination
                   currentPage={page}
                   totalPages={result.totalPages}
@@ -165,9 +165,9 @@ function SocialBit({
   if (!handle) return null;
   return (
     <span className="inline-flex items-center gap-1">
-      <Icon className="h-3.5 w-3.5 text-[var(--ink-mute)]" />
+      <Icon className="h-3.5 w-3.5 text-(--ink-mute)" />
       <span className="max-w-[140px] truncate">{handle}</span>
-      {followers !== null ? <span className="text-[var(--ink-mute)]">{formatFollowers(followers)}</span> : null}
+      {followers !== null ? <span className="text-(--ink-mute)">{formatFollowers(followers)}</span> : null}
     </span>
   );
 }

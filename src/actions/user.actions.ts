@@ -6,7 +6,7 @@
  * Currently handles logout. Future: user disable/enable if needed.
  */
 
-import { requireAdmin } from "@/lib/security";
+import { requireAdmin, getAdminEmail } from "@/lib/security";
 import { logAdminAction } from "@/lib/logger";
 import { signOut } from "@/auth";
 
@@ -20,7 +20,7 @@ export async function logoutAction(): Promise<void> {
 
     logAdminAction({
       action: "LOGOUT",
-      adminEmail: session.user?.email!,
+      adminEmail: getAdminEmail(session),
       details: "Admin logged out",
     });
   } catch {

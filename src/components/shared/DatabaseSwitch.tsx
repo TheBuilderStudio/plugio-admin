@@ -58,7 +58,7 @@ export function DatabaseSwitch({
         className={cn(
           "font-semibold",
           compact ? "px-0.5 text-[10px] uppercase tracking-[0.12em]" : "text-[12.5px]",
-          dark ? "text-[#FF6719]" : "text-[var(--ink-mute)]"
+          dark ? "text-brand-500" : "text-(--ink-mute)"
         )}
       >
         Database
@@ -66,21 +66,21 @@ export function DatabaseSwitch({
       <div
         className={cn(
           "grid grid-cols-2 gap-0.5 rounded-lg p-0.5",
-          dark ? "bg-white/[0.06]" : "bg-black/[0.06]"
+          dark ? "bg-white/6" : "bg-black/6"
         )}
       >
         <button
           type="button"
           onClick={() => switchTo("staging")}
           className={cn(
-            "rounded-md px-2 py-1.5 text-[12px] font-semibold outline-none ring-0 transition focus:outline-none",
+            "rounded-md px-2 py-1.5 text-[12px] font-semibold outline-hidden ring-0 transition focus:outline-hidden",
             dbContext === "staging"
               ? dark
                 ? "bg-white/14 text-white"
-                : "bg-[var(--paper)] text-[var(--ink)] shadow-sm"
+                : "bg-(--paper) text-(--ink) shadow-xs"
               : dark
                 ? "text-white/70 hover:text-white"
-                : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
+                : "text-(--ink-soft) hover:text-(--ink)"
           )}
         >
           Staging
@@ -89,12 +89,12 @@ export function DatabaseSwitch({
           type="button"
           onClick={() => switchTo("production")}
           className={cn(
-            "rounded-md px-2 py-1.5 text-[12px] font-semibold outline-none ring-0 transition focus:outline-none",
+            "rounded-md px-2 py-1.5 text-[12px] font-semibold outline-hidden ring-0 transition focus:outline-hidden",
             dbContext === "production"
-              ? "bg-[#FF6719] text-white"
+              ? "bg-brand-500 text-white"
               : dark
                 ? "text-white/70 hover:text-white"
-                : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
+                : "text-(--ink-soft) hover:text-(--ink)"
           )}
         >
           Production

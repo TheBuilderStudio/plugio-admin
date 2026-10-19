@@ -33,8 +33,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * This is the primary authorization gate.
      * Runs on the server — cannot be bypassed from the client.
      */
-    async signIn({ user }) {
+    async signIn({ user, profile }) {
       if (!user?.email) {
+        return false;
+      }
+
+      // Only trust an email address that Google has verified.
+      if (profile?.email_verified === false) {
         return false;
       }
 

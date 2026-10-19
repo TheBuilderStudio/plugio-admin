@@ -22,6 +22,33 @@ interface LogLine {
 
 type LevelFilter = "ALL" | "INFO" | "WARN" | "ERROR";
 
+function parseLogLine(raw: string, id: number): LogLine {
+  let level: LogLine["level"] = "UNKNOWN";
+  let timestamp = "";
+  let message = raw;
+
+  const match = raw.match(/^(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3})\s+\[.*?\]\s+(\w+)/);
+  if (match) {
+    timestamp = match[1];
+    const parsedLevel = match[2].toUpperCase();
+    if (["INFO", "WARN", "ERROR", "DEBUG"].includes(parsedLevel)) {
+      level = parsedLevel as LogLine["level"];
+    }
+    message = raw.substring(match[0].length).trim();
+    if (message.startsWith("-")) {
+      message = message.substring(1).trim();
+    }
+  }
+
+  return {
+    id,
+    raw,
+    level,
+    timestamp,
+    message,
+  };
+}
+
 export default function LogsPage() {
   const [logs, setLogs] = useState<LogLine[]>([]);
   const [search, setSearch] = useState("");
@@ -57,9 +84,11 @@ export default function LogsPage() {
       const rawLine = event.data;
       if (!rawLine) return;
 
+      // Build the line (and allocate its id) once, outside the state updater, which React may re-run.
+      lineIdCounter.current += 1;
+      const parsed = parseLogLine(rawLine, lineIdCounter.current);
       setLogs((prev) => {
         const trimmed = prev.length > 2000 ? prev.slice(prev.length - 1500) : prev;
-        const parsed = parseLogLine(rawLine);
         return [...trimmed, parsed];
       });
       setEventCount((c) => c + 1);
@@ -82,34 +111,6 @@ export default function LogsPage() {
     }
   }, [logs, autoScroll]);
 
-  const parseLogLine = (raw: string): LogLine => {
-    lineIdCounter.current += 1;
-    let level: LogLine["level"] = "UNKNOWN";
-    let timestamp = "";
-    let message = raw;
-
-    const match = raw.match(/^(\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3})\s+\[.*?\]\s+(\w+)/);
-    if (match) {
-      timestamp = match[1];
-      const parsedLevel = match[2].toUpperCase();
-      if (["INFO", "WARN", "ERROR", "DEBUG"].includes(parsedLevel)) {
-        level = parsedLevel as LogLine["level"];
-      }
-      message = raw.substring(match[0].length).trim();
-      if (message.startsWith("-")) {
-        message = message.substring(1).trim();
-      }
-    }
-
-    return {
-      id: lineIdCounter.current,
-      raw,
-      level,
-      timestamp,
-      message,
-    };
-  };
-
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
       const matchesLevel = levelFilter === "ALL" || log.level === levelFilter;
@@ -130,7 +131,7 @@ export default function LogsPage() {
       <>
         {parts.map((part, i) =>
           part.toLowerCase() === search.toLowerCase() ? (
-            <mark key={i} className="rounded bg-orange-500/30 px-0.5 text-orange-200">
+            <mark key={i} className="rounded-sm bg-orange-500/30 px-0.5 text-orange-200">
               {part}
             </mark>
           ) : (
@@ -148,10 +149,10 @@ export default function LogsPage() {
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 px-5 py-4 sm:px-6 lg:px-8">
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-          <div className="rounded-xl border border-[var(--line)] bg-[var(--paper)] px-3 py-2 text-[12px] font-semibold text-[var(--ink)]">
+          <div className="rounded-xl border border-(--line) bg-(--paper) px-3 py-2 text-[12px] font-semibold text-(--ink)">
             {eventCount.toLocaleString()} events
           </div>
-          <div className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--paper)] px-3 py-2">
+          <div className="inline-flex items-center gap-2 rounded-xl border border-(--line) bg-(--paper) px-3 py-2">
             {connectionStatus === "connecting" && (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-600" />
@@ -166,8 +167,8 @@ export default function LogsPage() {
             )}
             {connectionStatus === "paused" && (
               <>
-                <Pause className="h-3.5 w-3.5 text-[var(--ink-soft)]" />
-                <span className="text-[12px] font-semibold text-[var(--ink-soft)]">Paused</span>
+                <Pause className="h-3.5 w-3.5 text-(--ink-soft)" />
+                <span className="text-[12px] font-semibold text-(--ink-soft)">Paused</span>
               </>
             )}
             {connectionStatus === "disconnected" && (
@@ -179,9 +180,9 @@ export default function LogsPage() {
           </div>
         </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-[#2A2622] bg-[#0D0C0B] shadow-[var(--shadow-paper)]">
-        <div className="flex shrink-0 flex-col gap-3 border-b border-white/[0.06] px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex w-fit items-center gap-1 rounded-xl bg-white/[0.04] p-1">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-[#2A2622] bg-[#0D0C0B] shadow-(--shadow-paper)">
+        <div className="flex shrink-0 flex-col gap-3 border-b border-white/6 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex w-fit items-center gap-1 rounded-xl bg-white/4 p-1">
             {(
               [
                 { value: "ALL", label: "All" },
@@ -213,7 +214,7 @@ export default function LogsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search logs"
-                className="w-full rounded-xl border border-white/10 bg-black/40 py-2 pl-9 pr-3 text-[12px] text-white placeholder:text-white/30 outline-none focus:border-[#FF6719]"
+                className="w-full rounded-xl border border-white/10 bg-black/40 py-2 pl-9 pr-3 text-[12px] text-white placeholder:text-white/30 outline-hidden focus:border-brand-500"
               />
             </div>
             <label className="flex cursor-pointer select-none items-center gap-2 text-[12px] font-medium text-white/50">
@@ -221,14 +222,14 @@ export default function LogsPage() {
                 type="checkbox"
                 checked={autoScroll}
                 onChange={(e) => setAutoScroll(e.target.checked)}
-                className="rounded border-white/20 bg-black text-[#FF6719] focus:ring-0"
+                className="rounded-sm border-white/20 bg-black text-brand-500 focus:ring-0"
               />
               Follow
             </label>
             <button
               type="button"
               onClick={() => setIsPaused(!isPaused)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/[0.08]"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/4 px-3 py-2 text-[12px] font-semibold text-white/80 hover:bg-white/8"
             >
               {isPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
               {isPaused ? "Resume" : "Pause"}
@@ -236,7 +237,7 @@ export default function LogsPage() {
             <button
               type="button"
               onClick={clearLogs}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[12px] font-semibold text-white/50 hover:border-red-500/30 hover:text-red-300"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/4 px-3 py-2 text-[12px] font-semibold text-white/50 hover:border-red-500/30 hover:text-red-300"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Clear
@@ -270,7 +271,7 @@ export default function LogsPage() {
               }
 
               return (
-                <div key={log.id} className="flex items-start gap-3 rounded-lg px-1 py-0.5 hover:bg-white/[0.03]">
+                <div key={log.id} className="flex items-start gap-3 rounded-lg px-1 py-0.5 hover:bg-white/3">
                   {log.timestamp ? (
                     <span className="shrink-0 select-none text-white/25">{log.timestamp}</span>
                   ) : null}

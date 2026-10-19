@@ -14,6 +14,7 @@ import {
   Ticket,
   Tags,
   Eye,
+  Store,
 } from "lucide-react";
 import { logoutAction } from "@/actions/user.actions";
 import { cn } from "@/lib/utils";
@@ -51,19 +52,19 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
     <Link
       href={item.href}
       className={cn(
-        "flex items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-[13.5px] font-medium outline-none ring-0 transition-colors [-webkit-tap-highlight-color:transparent] focus:outline-none focus-visible:outline-none",
+        "flex items-center gap-2.5 rounded-lg px-2.5 py-2.5 text-[13.5px] font-medium outline-hidden ring-0 transition-colors [-webkit-tap-highlight-color:transparent] focus:outline-hidden focus-visible:outline-hidden",
         active
-          ? "bg-white/[0.09] text-white"
-          : "text-white/80 hover:bg-white/[0.06] hover:text-white"
+          ? "bg-white/9 text-white"
+          : "text-white/80 hover:bg-white/6 hover:text-white"
       )}
     >
       <Icon
-        className={cn("h-[18px] w-[18px] shrink-0", active ? "text-[#FF6719]" : "text-white/70")}
+        className={cn("h-[18px] w-[18px] shrink-0", active ? "text-brand-500" : "text-white/70")}
         strokeWidth={active ? 2.25 : 1.9}
       />
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {typeof item.badge === "number" && item.badge > 0 ? (
-        <span className="rounded-md bg-[#FF6719] px-1.5 py-px text-[10px] font-bold tabular-nums text-white">
+        <span className="rounded-md bg-brand-500 px-1.5 py-px text-[10px] font-bold tabular-nums text-white">
           {item.badge > 99 ? "99+" : item.badge}
         </span>
       ) : null}
@@ -82,7 +83,7 @@ function NavGroup({
 }) {
   return (
     <div>
-      <p className="px-2.5 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#FF6719]">
+      <p className="px-2.5 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-brand-500">
         {label}
       </p>
       <ul className="space-y-1.5">
@@ -114,6 +115,7 @@ export function AdminSidebar({
     { label: "Plans", href: "/admin/plans", icon: Tags },
     { label: "Coupons", href: "/admin/coupons", icon: Ticket },
     { label: "Payments", href: "/admin/payments", icon: Receipt },
+    { label: "Store", href: "/admin/store", icon: Store },
   ];
   const systemNav: NavItem[] = [
     { label: "Audit", href: "/admin/audit", icon: Shield },
@@ -122,9 +124,9 @@ export function AdminSidebar({
   ];
 
   return (
-    <aside className="flex h-full w-[var(--sidebar-width)] shrink-0 select-none flex-col border-r border-white/[0.08] bg-[#0A0908]">
+    <aside className="flex h-full w-(--sidebar-width) shrink-0 select-none flex-col border-r border-white/8 bg-sidebar-bg">
       <div className="flex h-14 shrink-0 items-center gap-2.5 px-4">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#FF6719]">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-500">
           <span className="text-[14px] font-black leading-none text-white">P</span>
         </div>
         <div className="min-w-0">
@@ -150,7 +152,7 @@ export function AdminSidebar({
         <NavGroup label="System" items={systemNav} pathname={pathname} />
       </nav>
 
-      <div className="shrink-0 space-y-2.5 border-t border-white/[0.08] p-3">
+      <div className="shrink-0 space-y-2.5 border-t border-white/8 p-3">
         <DatabaseSwitch compact tone="dark" />
 
         <div className="flex items-center gap-2">
@@ -162,7 +164,7 @@ export function AdminSidebar({
               className="h-8 w-8 shrink-0 rounded-lg object-cover"
             />
           ) : (
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#FF6719] text-[11px] font-bold text-white">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-500 text-[11px] font-bold text-white">
               {adminName?.[0]?.toUpperCase() ?? "A"}
             </div>
           )}
@@ -174,7 +176,7 @@ export function AdminSidebar({
             <button
               type="submit"
               title="Sign out"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-white/55 outline-none ring-0 transition hover:bg-white/[0.08] hover:text-white focus:outline-none"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-white/55 outline-hidden ring-0 transition hover:bg-white/8 hover:text-white focus:outline-hidden"
             >
               <LogOut className="h-3.5 w-3.5" strokeWidth={2} />
             </button>

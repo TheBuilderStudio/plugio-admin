@@ -39,11 +39,11 @@ export function AdminPageHeader({
     <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0 space-y-1.5">
         {kicker ? <p className="admin-kicker">{kicker}</p> : null}
-        <h1 className="text-[26px] font-semibold tracking-tight text-[var(--ink)] sm:text-[30px]">
+        <h1 className="text-[26px] font-semibold tracking-tight text-(--ink) sm:text-[30px]">
           {title}
         </h1>
         {description ? (
-          <p className="max-w-2xl text-[14px] leading-relaxed text-[var(--ink-soft)]">
+          <p className="max-w-2xl text-[14px] leading-relaxed text-(--ink-soft)">
             {description}
           </p>
         ) : null}
@@ -84,11 +84,11 @@ export function AdminPanel({
 }) {
   return (
     <section className={cn("admin-card overflow-hidden", className)}>
-      <div className="flex items-start justify-between gap-3 border-b border-[var(--line)] px-5 py-4">
+      <div className="flex items-start justify-between gap-3 border-b border-(--line) px-5 py-4">
         <div>
-          <h2 className="text-[15px] font-semibold tracking-tight text-[var(--ink)]">{title}</h2>
+          <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">{title}</h2>
           {subtitle ? (
-            <p className="mt-0.5 text-[12.5px] text-[var(--ink-soft)]">{subtitle}</p>
+            <p className="mt-0.5 text-[12.5px] text-(--ink-soft)">{subtitle}</p>
           ) : null}
         </div>
         {action}
@@ -112,8 +112,8 @@ export function FilterPills({
           className={cn(
             "rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold transition",
             item.active
-              ? "bg-[var(--ink)] text-white"
-              : "text-[var(--ink-soft)] hover:bg-[#F7F4EE] hover:text-[var(--ink)]"
+              ? "bg-(--ink) text-white"
+              : "text-(--ink-soft) hover:bg-[#F7F4EE] hover:text-(--ink)"
           )}
         >
           {item.label}
@@ -143,18 +143,18 @@ export function KpiTile({
     <div
       className={cn(
         "admin-card h-full p-4 transition",
-        href && "hover:border-[#FF6719]/35",
-        tone === "alert" && "border-amber-300/80 bg-gradient-to-br from-amber-50 to-[var(--paper)]",
-        tone === "brand" && "border-orange-200 bg-gradient-to-br from-orange-50 to-[var(--paper)]"
+        href && "hover:border-brand-500/35",
+        tone === "alert" && "border-amber-300/80 bg-linear-to-br from-amber-50 to-(--paper)",
+        tone === "brand" && "border-orange-200 bg-linear-to-br from-orange-50 to-(--paper)"
       )}
     >
-      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--ink-mute)]">
+      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
         {label}
       </p>
-      <p className="mt-2 text-[22px] font-semibold tabular-nums tracking-tight text-[var(--ink)] sm:text-[24px]">
+      <p className="mt-2 text-[22px] font-semibold tabular-nums tracking-tight text-(--ink) sm:text-[24px]">
         {value}
       </p>
-      {hint ? <p className="mt-1 text-[12px] text-[var(--ink-soft)]">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-[12px] text-(--ink-soft)">{hint}</p> : null}
     </div>
   );
   return href ? <Link href={href}>{body}</Link> : body;

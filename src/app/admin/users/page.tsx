@@ -47,7 +47,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
   return (
     <AdminPage>
       <AdminCard padded={false}>
-        <div className="flex flex-col gap-3 border-b border-[var(--line)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-b border-(--line) px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
             <FilterPills
               items={USER_FILTERS.map((tab) => ({
@@ -56,14 +56,14 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                 active: filter === tab.value,
               }))}
             />
-            <p className="shrink-0 text-[12px] text-[var(--ink-mute)]">
+            <p className="shrink-0 text-[12px] text-(--ink-mute)">
               {stats.total_users.toLocaleString()} total · +{stats.new_last_7_days} / 7d
             </p>
           </div>
           <div className="flex items-center gap-2">
             <form method="GET" className="relative min-w-[200px] flex-1 sm:w-[240px] sm:flex-none">
               {filter !== "ALL" && <input type="hidden" name="filter" value={filter} />}
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--ink-mute)]" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-(--ink-mute)" />
               <input
                 type="search"
                 name="search"
@@ -110,22 +110,22 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                       <td>
                         <Link href={`/admin/users/${user.id}`} className="flex items-center gap-3">
                           {user.picture ? (
-                            <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-[var(--line)]">
+                            <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-(--line)">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={user.picture} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                             </div>
                           ) : (
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#FF6719]/10 text-[12px] font-bold text-[#FF6719]">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 text-[12px] font-bold text-brand-500">
                               {getInitials(user.name)}
                             </div>
                           )}
                           <div className="min-w-0">
-                            <p className="truncate font-semibold text-[var(--ink)]">{user.name ?? "—"}</p>
-                            <p className="truncate text-[12px] text-[var(--ink-soft)]">{user.email}</p>
+                            <p className="truncate font-semibold text-(--ink)">{user.name ?? "—"}</p>
+                            <p className="truncate text-[12px] text-(--ink-soft)">{user.email}</p>
                           </div>
                         </Link>
                       </td>
-                      <td className="whitespace-nowrap text-[var(--ink-soft)]">{formatDate(user.created_at)}</td>
+                      <td className="whitespace-nowrap text-(--ink-soft)">{formatDate(user.created_at)}</td>
                       <td>
                         <StatusBadge status={user.access_status} />
                       </td>
@@ -133,7 +133,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                         <StatusBadge status={user.subscription_status ?? "NONE"} />
                       </td>
                       <td className="text-right">
-                        <Link href={`/admin/users/${user.id}`} className="text-[12.5px] font-semibold text-[#FF6719]">
+                        <Link href={`/admin/users/${user.id}`} className="text-[12.5px] font-semibold text-brand-500">
                           Open
                         </Link>
                       </td>
@@ -142,7 +142,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                 </tbody>
               </table>
             </div>
-            <div className="border-t border-[var(--line)]">
+            <div className="border-t border-(--line)">
               <Pagination
                 currentPage={page}
                 totalPages={result.totalPages}

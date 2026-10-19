@@ -22,21 +22,21 @@ export default async function SettingsPage() {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <AdminCard>
           <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[#F7F4EE] text-[var(--ink-soft)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-(--line) bg-[#F7F4EE] text-(--ink-soft)">
               <Database className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="text-[15px] font-semibold tracking-tight text-[var(--ink)]">
+              <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">
                 Database
               </h2>
-              <p className="text-[12.5px] text-[var(--ink-soft)]">
+              <p className="text-[12.5px] text-(--ink-soft)">
                 Switch which Plugio database this console reads and writes.
               </p>
             </div>
           </div>
           <DatabaseSwitch />
-          <p className="mt-3 text-[12.5px] text-[var(--ink-soft)]">
-            Now on <span className="font-semibold text-[var(--ink)]">{dbContext === "production" ? "Production" : "Staging"}</span>
+          <p className="mt-3 text-[12.5px] text-(--ink-soft)">
+            Now on <span className="font-semibold text-(--ink)">{dbContext === "production" ? "Production" : "Staging"}</span>
             {hasStagingDb
               ? "."
               : ". Staging env vars are not set separately, so both sides use the active connection until they are."}
@@ -45,10 +45,10 @@ export default async function SettingsPage() {
 
         <AdminCard>
           <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[#F7F4EE] text-[var(--ink-soft)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-(--line) bg-[#F7F4EE] text-(--ink-soft)">
               <Info className="h-4 w-4" />
             </div>
-            <h2 className="text-[15px] font-semibold tracking-tight text-[var(--ink)]">
+            <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">
               Application
             </h2>
           </div>
@@ -65,10 +65,10 @@ export default async function SettingsPage() {
 
         <AdminCard>
           <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[#F7F4EE] text-[var(--ink-soft)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-(--line) bg-[#F7F4EE] text-(--ink-soft)">
               <Activity className="h-4 w-4" />
             </div>
-            <h2 className="text-[15px] font-semibold tracking-tight text-[var(--ink)]">Health</h2>
+            <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Health</h2>
           </div>
           <div className="space-y-3">
             <StatusCard
@@ -92,10 +92,10 @@ export default async function SettingsPage() {
 
         <AdminCard className="lg:col-span-2">
           <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[#F7F4EE] text-[var(--ink-soft)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-(--line) bg-[#F7F4EE] text-(--ink-soft)">
               <Server className="h-4 w-4" />
             </div>
-            <h2 className="text-[15px] font-semibold tracking-tight text-[var(--ink)]">
+            <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">
               Authorized operators
             </h2>
           </div>
@@ -106,21 +106,21 @@ export default async function SettingsPage() {
                 className={`flex items-center justify-between rounded-xl border px-4 py-3 ${
                   email === session?.user?.email
                     ? "border-orange-200 bg-orange-50"
-                    : "border-[var(--line)] bg-[#F7F4EE]"
+                    : "border-(--line) bg-[#F7F4EE]"
                 }`}
               >
-                <span className="font-mono text-[13px] font-medium text-[var(--ink)]">{email}</span>
+                <span className="font-mono text-[13px] font-medium text-(--ink)">{email}</span>
                 {email === session?.user?.email ? (
-                  <span className="rounded-md bg-[var(--paper)] px-2 py-0.5 text-[11px] font-semibold text-[#FF6719]">
+                  <span className="rounded-md bg-(--paper) px-2 py-0.5 text-[11px] font-semibold text-brand-500">
                     You
                   </span>
                 ) : null}
               </div>
             ))}
           </div>
-          <p className="mt-4 text-[12.5px] leading-relaxed text-[var(--ink-soft)]">
+          <p className="mt-4 text-[12.5px] leading-relaxed text-(--ink-soft)">
             To add or remove operators, change the{" "}
-            <code className="rounded-md border border-[var(--line)] bg-white px-1.5 py-0.5 font-mono text-[12px]">
+            <code className="rounded-md border border-(--line) bg-white px-1.5 py-0.5 font-mono text-[12px]">
               ADMIN_EMAILS
             </code>{" "}
             array in source and redeploy.
@@ -143,17 +143,17 @@ function InfoRow({
   badge?: "blue" | "orange" | null;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-[var(--line)] py-2.5 last:border-0">
-      <span className="text-[12.5px] font-medium text-[var(--ink-mute)]">{label}</span>
+    <div className="flex items-center justify-between gap-4 border-b border-(--line) py-2.5 last:border-0">
+      <span className="text-[12.5px] font-medium text-(--ink-mute)">{label}</span>
       <span
         className={
           badge
             ? badge === "orange"
-              ? "rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-[12px] font-semibold text-[#FF6719]"
+              ? "rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-[12px] font-semibold text-brand-500"
               : "rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[12px] font-semibold text-sky-700"
             : mono
-              ? "max-w-[60%] truncate rounded-md border border-[var(--line)] bg-[#F7F4EE] px-1.5 py-0.5 font-mono text-[12px] text-[var(--ink)]"
-              : "text-[13.5px] font-medium text-[var(--ink)]"
+              ? "max-w-[60%] truncate rounded-md border border-(--line) bg-[#F7F4EE] px-1.5 py-0.5 font-mono text-[12px] text-(--ink)"
+              : "text-[13.5px] font-medium text-(--ink)"
         }
       >
         {value}
@@ -174,14 +174,14 @@ function StatusCard({
   detail: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-[var(--line)] bg-[#F7F4EE] px-4 py-3">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-(--line) bg-[#F7F4EE] px-4 py-3">
       <div className="flex min-w-0 items-center gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--paper)]">
-          <Icon className="h-4 w-4 text-[var(--ink-soft)]" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-(--line) bg-(--paper)">
+          <Icon className="h-4 w-4 text-(--ink-soft)" />
         </div>
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-[var(--ink)]">{label}</p>
-          <p className="truncate font-mono text-[11px] text-[var(--ink-soft)]">{detail}</p>
+          <p className="text-[13px] font-semibold text-(--ink)">{label}</p>
+          <p className="truncate font-mono text-[11px] text-(--ink-soft)">{detail}</p>
         </div>
       </div>
       <span
@@ -198,5 +198,7 @@ function StatusCard({
     </div>
   );
 }
+
+
 
 

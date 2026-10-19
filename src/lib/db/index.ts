@@ -73,7 +73,7 @@ export async function getActiveDbContext(): Promise<"production" | "staging"> {
     if (context === "production" || context === "staging") {
       return context;
     }
-  } catch (e) {
+  } catch {
     // cookies() throws when called outside Request context (e.g. at build time or custom CLI scripts)
   }
   return process.env.NEXT_PUBLIC_ENVIRONMENT === "staging" ? "staging" : "production";

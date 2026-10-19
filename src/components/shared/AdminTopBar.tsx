@@ -31,8 +31,8 @@ export function AdminTopBar({ isReadOnly = false, pendingBeta = 0 }: AdminTopBar
   const title = resolveTitle(pathname);
 
   return (
-    <header className="z-30 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-[var(--line)] bg-[var(--canvas)] px-6 lg:px-8">
-      <p className="truncate text-[16px] font-semibold tracking-tight text-[var(--ink)]">{title}</p>
+    <header className="z-30 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-(--line) bg-(--canvas) px-6 lg:px-8">
+      <p className="truncate text-[16px] font-semibold tracking-tight text-(--ink)">{title}</p>
 
       <div className="flex shrink-0 items-center gap-2">
         {isReadOnly && (
@@ -44,7 +44,7 @@ export function AdminTopBar({ isReadOnly = false, pendingBeta = 0 }: AdminTopBar
           <Link
             href="/admin/beta?status=PENDING"
             aria-label={`${pendingBeta} pending beta requests`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#FF6719] px-2.5 py-1.5 text-[12px] font-semibold text-white outline-none ring-0 transition hover:bg-[#EA580C] focus:outline-none"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-2.5 py-1.5 text-[12px] font-semibold text-white outline-hidden ring-0 transition hover:bg-brand-600 focus:outline-hidden"
           >
             <ClipboardList className="h-3.5 w-3.5" aria-hidden />
             {pendingBeta}

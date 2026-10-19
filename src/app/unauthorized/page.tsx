@@ -7,9 +7,9 @@ export const metadata: Metadata = {
 
 export default function UnauthorizedPage() {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-[#0A0908] px-6">
+    <div className="flex min-h-dvh items-center justify-center bg-sidebar-bg px-6">
       <div className="max-w-sm text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#FF6719]">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-500">
           Restricted
         </p>
         <h1 className="mt-3 text-[28px] font-semibold tracking-tight text-white">

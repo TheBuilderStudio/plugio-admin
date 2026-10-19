@@ -150,10 +150,10 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
       )}
 
       <section className="admin-card p-5 sm:p-6">
-        <h2 className="mb-1 text-[15px] font-semibold tracking-tight text-[var(--ink)]">
+        <h2 className="mb-1 text-[15px] font-semibold tracking-tight text-(--ink)">
           Create trial code
         </h2>
-        <p className="mb-4 text-[12.5px] text-[var(--ink-soft)]">
+        <p className="mb-4 text-[12.5px] text-(--ink-soft)">
           Percent off the {formatUsd(catalog.trialPrice)} /{" "}
           {formatInr((catalog.inr ?? PLAN_CATALOG_USD.inr).trialPrice)} {catalog.trialDays}-day
           list. Maximum 90% — every trial still pays through Razorpay.
@@ -166,7 +166,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
           <form onSubmit={handleCreate} className="space-y-3">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
               <div>
-                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--ink-mute)]">
+                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
                   Code
                 </label>
                 <input
@@ -179,7 +179,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--ink-mute)]">
+                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
                   Percent off
                 </label>
                 <input
@@ -193,7 +193,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--ink-mute)]">
+                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
                   Expires
                 </label>
                 <input
@@ -205,7 +205,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--ink-mute)]">
+                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
                   Max people
                 </label>
                 <input
@@ -218,7 +218,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--ink-mute)]">
+                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
                   Note
                 </label>
                 <input
@@ -244,11 +244,11 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
               </p>
             ) : null}
             {previewLine ? (
-              <div className="rounded-xl border border-[var(--line)] bg-[#F7F4EE] px-3 py-2 font-mono text-[12px] leading-relaxed text-[var(--ink)]">
+              <div className="rounded-xl border border-(--line) bg-[#F7F4EE] px-3 py-2 font-mono text-[12px] leading-relaxed text-(--ink)">
                 {previewLine}
               </div>
             ) : (
-              <p className="text-[12.5px] text-[var(--ink-soft)]">
+              <p className="text-[12.5px] text-(--ink-soft)">
                 {PERCENT_RANGE_HINT}
               </p>
             )}
@@ -294,7 +294,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                     <td>
                       <span className="font-mono font-semibold">{coupon.code}</span>
                       {coupon.created_by ? (
-                        <p className="mt-0.5 text-[12px] text-[var(--ink-mute)]">by {coupon.created_by}</p>
+                        <p className="mt-0.5 text-[12px] text-(--ink-mute)">by {coupon.created_by}</p>
                       ) : null}
                     </td>
                     <td>
@@ -324,14 +324,14 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                       ) : (
                         <span className="font-semibold tabular-nums">
                           {coupon.redeemed_count}
-                          <span className="font-medium text-[var(--ink-mute)]">
+                          <span className="font-medium text-(--ink-mute)">
                             {" "}
                             / {coupon.max_redemptions === null ? "∞" : coupon.max_redemptions}
                           </span>
                         </span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap text-[var(--ink-soft)]">
+                    <td className="whitespace-nowrap text-(--ink-soft)">
                       {editingId === coupon.id ? (
                         <input
                           type="datetime-local"
@@ -355,15 +355,15 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                           className="admin-input py-1.5"
                         />
                       ) : (
-                        <span className="block truncate text-[var(--ink-soft)]">{coupon.note || "—"}</span>
+                        <span className="block truncate text-(--ink-soft)">{coupon.note || "—"}</span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap text-[var(--ink-soft)]">
+                    <td className="whitespace-nowrap text-(--ink-soft)">
                       {formatDateTime(coupon.created_at)}
                     </td>
                     <td>
                       {isReadOnly ? (
-                        <span className="text-[12px] text-[var(--ink-mute)]">Read-only</span>
+                        <span className="text-[12px] text-(--ink-mute)">Read-only</span>
                       ) : (
                         <div className="flex items-center justify-end gap-1.5">
                           {editingId === coupon.id ? (
@@ -381,7 +381,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                                 type="button"
                                 onClick={() => setEditingId(null)}
                                 disabled={isPending}
-                                className="rounded-lg bg-[#F7F4EE] p-1.5 text-[var(--ink-soft)] hover:bg-[#EDE8DF]"
+                                className="rounded-lg bg-[#F7F4EE] p-1.5 text-(--ink-soft) hover:bg-[#EDE8DF]"
                                 title="Cancel"
                               >
                                 <X className="h-4 w-4" />
@@ -393,7 +393,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                                 type="button"
                                 onClick={() => startEdit(coupon)}
                                 disabled={isPending}
-                                className="rounded-lg bg-[#F7F4EE] p-1.5 text-[var(--ink-soft)] hover:bg-[#EDE8DF] disabled:opacity-50"
+                                className="rounded-lg bg-[#F7F4EE] p-1.5 text-(--ink-soft) hover:bg-[#EDE8DF] disabled:opacity-50"
                                 title="Edit"
                               >
                                 <Pencil className="h-4 w-4" />

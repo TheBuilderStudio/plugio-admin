@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireWritableAdmin } from "@/lib/security";
+import { requireWritableAdmin, getAdminEmail } from "@/lib/security";
 import { ValidationError } from "@/lib/validation";
 import { updateBillingPlanSettings } from "@/lib/db/queries";
 import { logAdminAction } from "@/lib/logger";
@@ -126,7 +126,7 @@ export async function updatePlanCatalogAction(input: {
 
     logAdminAction({
       action: "PLAN_CATALOG_UPDATE",
-      adminEmail: session.user?.email!,
+      adminEmail: getAdminEmail(session),
       details: `Trial $${catalog.trialPrice}/₹${catalog.inr.trialPrice}/${catalog.trialDays}d · Creator $${catalog.CREATOR.monthly}/₹${catalog.inr.CREATOR.monthly} · Pro $${catalog.PRO.monthly}/₹${catalog.inr.PRO.monthly} · channels ${catalog.channelsPerPlatform.TRIAL}/${catalog.channelsPerPlatform.CREATOR}/${catalog.channelsPerPlatform.PRO}`,
     });
 

@@ -83,7 +83,7 @@ export function BetaActions({ userId, currentStatus }: BetaActionsProps) {
 
   if (currentStatus === "REJECTED") {
     return (
-      <p className="text-center text-[13px] font-medium text-[var(--ink-soft)]">
+      <p className="text-center text-[13px] font-medium text-(--ink-soft)">
         This application has already been declined.
       </p>
     );
@@ -92,7 +92,7 @@ export function BetaActions({ userId, currentStatus }: BetaActionsProps) {
   if (currentStatus === "APPROVED" && !isPendingApprove) {
     return (
       <div className="space-y-3">
-        <p className="text-center text-[13px] font-medium text-[var(--ink-soft)]">
+        <p className="text-center text-[13px] font-medium text-(--ink-soft)">
           Access granted — they still need a coupon to start trial.
         </p>
         {outreach ? (

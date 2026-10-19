@@ -25,10 +25,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.05fr_0.95fr]">
-      <section className="relative hidden overflow-hidden bg-[#0A0908] px-12 py-14 text-white lg:flex lg:flex-col lg:justify-between">
+      <section className="relative hidden overflow-hidden bg-sidebar-bg px-12 py-14 text-white lg:flex lg:flex-col lg:justify-between">
         <div
           aria-hidden
-          className="pointer-events-none absolute -left-24 top-20 h-80 w-80 rounded-full bg-[#FF6719]/20 blur-3xl"
+          className="pointer-events-none absolute -left-24 top-20 h-80 w-80 rounded-full bg-brand-500/20 blur-3xl"
         />
         <div
           aria-hidden
@@ -36,7 +36,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         />
         <div className="relative">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF6719]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500">
               <span className="text-lg font-black text-white">P</span>
             </div>
             <div>
@@ -60,11 +60,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </ul>
       </section>
 
-      <section className="flex items-center justify-center bg-[var(--canvas)] px-6 py-12">
+      <section className="flex items-center justify-center bg-(--canvas) px-6 py-12">
         <div className="w-full max-w-[380px]">
           <div className="mb-8 lg:hidden">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FF6719]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500">
                 <span className="font-black text-white">P</span>
               </div>
               <p className="text-sm font-semibold">Plugio Console</p>
@@ -72,10 +72,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
 
           <p className="admin-kicker">Restricted</p>
-          <h2 className="mt-2 text-[28px] font-semibold tracking-tight text-[var(--ink)]">
+          <h2 className="mt-2 text-[28px] font-semibold tracking-tight text-(--ink)">
             Sign in to operate
           </h2>
-          <p className="mt-2 text-[14px] text-[var(--ink-soft)]">
+          <p className="mt-2 text-[14px] text-(--ink-soft)">
             Google accounts on the operator list only.
           </p>
 
@@ -92,7 +92,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               await signIn("google", { redirectTo: callbackUrl });
             }}
           >
-            <button type="submit" className="admin-btn-ghost h-12 w-full bg-[var(--paper)] text-[14px]">
+            <button type="submit" className="admin-btn-ghost h-12 w-full bg-(--paper) text-[14px]">
               <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden>
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -103,7 +103,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </button>
           </form>
 
-          <p className="mt-8 text-center text-[12px] text-[var(--ink-mute)]">
+          <p className="mt-8 text-center text-[12px] text-(--ink-mute)">
             © {new Date().getFullYear()} Plugio · Internal use
           </p>
         </div>
