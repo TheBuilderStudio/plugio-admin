@@ -59,6 +59,15 @@ export interface StoreProduct {
   createdAt: string;
 }
 
+/** The two commission policies (the only two) and the version an update must be based on. */
+export interface CommissionPolicy {
+  digitalProductsFeePercent: number;
+  bookingsFeePercent: number;
+  version: number;
+  updatedBy: string | null;
+  updatedAt: string | null;
+}
+
 export class StoreApiError extends Error {}
 
 async function call<T>(actor: string, path: string, init?: { method?: string; body?: unknown }): Promise<T> {
@@ -87,6 +96,9 @@ async function call<T>(actor: string, path: string, init?: { method?: string; bo
 }
 
 export const storeApi = {
+  commissionPolicy: (actor: string) => call<CommissionPolicy>(actor, "/monetization"),
+  updateCommissionPolicy: (actor: string, body: { digitalProductsFeePercent: number; bookingsFeePercent: number; version: number }) =>
+    call<CommissionPolicy>(actor, "/monetization", { method: "PUT", body }),
   payouts: (actor: string, status: string, page: number) =>
     call<StorePage<StorePayout>>(actor, `/payouts?status=${encodeURIComponent(status)}&page=${page}`),
   markPaid: (actor: string, id: string, reference: string) =>

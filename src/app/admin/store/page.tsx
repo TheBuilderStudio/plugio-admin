@@ -6,6 +6,7 @@ import { AdminPage, AdminPageHeader, AdminCard, FilterPills } from "@/components
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pagination } from "@/components/shared/Pagination";
 import { StoreRowAction } from "@/components/store/StoreRowAction";
+import { CommissionPolicyForm } from "@/components/store/CommissionPolicyForm";
 import { formatDateTime } from "@/lib/utils";
 import {
   markPayoutPaidAction,
@@ -13,16 +14,18 @@ import {
   rejectPayoutAction,
   suspendProductAction,
   unsuspendProductAction,
+  updateCommissionPolicyAction,
 } from "@/actions/store.actions";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
-type Tab = "payouts" | "orders" | "products";
+type Tab = "payouts" | "orders" | "products" | "commission";
 const TABS: { id: Tab; label: string }[] = [
   { id: "payouts", label: "Payouts" },
   { id: "orders", label: "Orders & refunds" },
   { id: "products", label: "Products" },
+  { id: "commission", label: "Commission policy" },
 ];
 
 interface StorePageProps {
@@ -75,7 +78,29 @@ export default async function StoreAdminPage({ searchParams }: StorePageProps) {
       {tab === "payouts" && <PayoutsTab actor={actor} status={status} page={page} />}
       {tab === "orders" && <OrdersTab actor={actor} page={page} />}
       {tab === "products" && <ProductsTab actor={actor} page={page} />}
+      {tab === "commission" && <CommissionTab actor={actor} />}
     </AdminPage>
+  );
+}
+
+async function CommissionTab({ actor }: { actor: string }) {
+  let policy;
+  try {
+    policy = await storeApi.commissionPolicy(actor);
+  } catch (e) {
+    return <ErrorCard error={e} />;
+  }
+  return (
+    <AdminCard>
+      <CommissionPolicyForm
+        digital={String(policy.digitalProductsFeePercent)}
+        bookings={String(policy.bookingsFeePercent)}
+        version={policy.version}
+        updatedBy={policy.updatedBy}
+        updatedAt={policy.updatedAt ? formatDateTime(policy.updatedAt) : null}
+        action={updateCommissionPolicyAction}
+      />
+    </AdminCard>
   );
 }
 

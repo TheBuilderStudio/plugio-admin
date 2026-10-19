@@ -315,6 +315,7 @@ export interface AdminAuditLog {
     | "STORE_REFUND"
     | "STORE_PRODUCT_SUSPEND"
     | "STORE_PRODUCT_UNSUSPEND"
+    | "STORE_COMMISSION_UPDATE"
     // Legacy — kept for reading old audit logs; do not emit new entries
     | "BILLING_GRANT"
     | "BILLING_GRANT_EXTEND"

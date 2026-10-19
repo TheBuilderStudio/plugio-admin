@@ -51,6 +51,46 @@ async function run(
   }
 }
 
+const RATE_PATTERN = /^\d{1,2}(\.\d{1,2})?$/;
+const MAX_RATE = 50;
+
+function parseRate(label: string, raw: string): { value: number } | { error: string } {
+  const text = raw.trim();
+  if (!RATE_PATTERN.test(text)) return { error: `${label} must be a number with at most 2 decimal places.` };
+  const value = Number(text);
+  if (!Number.isFinite(value) || value < 0 || value > MAX_RATE) return { error: `${label} must be between 0% and ${MAX_RATE}%.` };
+  return { value };
+}
+
+/** Saves both commission rates. The server re-validates, checks the version and writes the audit trail. */
+export async function updateCommissionPolicyAction(digital: string, bookings: string, version: number): Promise<ActionResult> {
+  try {
+    const session = await requireWritableAdmin();
+    const adminEmail = session.user?.email;
+    if (!adminEmail) return { success: false, message: "No admin email on session." };
+    const d = parseRate("Digital products fee", digital);
+    if ("error" in d) return { success: false, message: d.error };
+    const b = parseRate("Bookings fee", bookings);
+    if ("error" in b) return { success: false, message: b.error };
+    if (!Number.isInteger(version) || version < 0) return { success: false, message: "Reload the page and try again." };
+
+    const saved = await storeApi.updateCommissionPolicy(adminEmail, {
+      digitalProductsFeePercent: d.value,
+      bookingsFeePercent: b.value,
+      version,
+    });
+    logAdminAction({
+      action: "STORE_COMMISSION_UPDATE",
+      adminEmail,
+      details: `digital=${saved.digitalProductsFeePercent}% bookings=${saved.bookingsFeePercent}% v${saved.version}`,
+    });
+    revalidatePath("/admin/store");
+    return { success: true, message: "Commission policy saved. It applies to new checkouts from now on." };
+  } catch (error) {
+    return fail(error, "Could not save the commission policy.");
+  }
+}
+
 export async function markPayoutPaidAction(id: string, reference: string): Promise<ActionResult> {
   return run(id, { reference }, "STORE_PAYOUT_PAID", "Payout marked as paid.", (a, c) => storeApi.markPaid(a, id, c.reference));
 }
