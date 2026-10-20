@@ -72,29 +72,82 @@ export interface CommissionPolicy {
 
 export class StoreApiError extends Error {}
 
-async function call<T>(actor: string, path: string, init?: { method?: string; body?: unknown }): Promise<T> {
-  // Follow the Staging/Production switch: staging talks to the staging backend, production to production.
-  const staging = (await getActiveDbContext()) === "staging";
-  const apiKey = (staging && process.env.STAGING_ADMIN_API_KEY) || process.env.ADMIN_API_KEY;
-  if (!apiKey) throw new StoreApiError("ADMIN_API_KEY is not configured");
-  const backend =
-    (staging && process.env.STAGING_BACKEND_API_URL) || process.env.BACKEND_API_URL || "http://localhost:8080";
+async function resolveBackendConfig(): Promise<{ backend: string; apiKey: string }> {
+  const isStaging = (await getActiveDbContext()) === "staging";
+  const isDev = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_ENVIRONMENT === "development";
 
-  const res = await fetch(`${backend}/api/admin/store${path}`, {
-    method: init?.method ?? "GET",
-    headers: {
-      "X-Admin-Api-Key": apiKey,
-      "X-Admin-Actor": actor,
-      Accept: "application/json",
-      ...(init?.body !== undefined ? { "Content-Type": "application/json" } : {}),
-    },
-    body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
-    cache: "no-store",
-    signal: AbortSignal.timeout(20_000),
-  });
+  let backend: string | undefined;
+  let apiKey: string | undefined;
+
+  if (isStaging) {
+    backend = process.env.STAGING_BACKEND_API_URL;
+    apiKey = process.env.STAGING_ADMIN_API_KEY || process.env.ADMIN_API_KEY;
+
+    // In local development, fall back to localhost if staging backend isn't explicitly configured
+    if (!backend && isDev) {
+      backend = process.env.BACKEND_API_URL || "http://localhost:8080";
+    }
+
+    if (!backend) {
+      throw new StoreApiError(
+        "STAGING_BACKEND_API_URL is not configured. When Staging database context is active, configure STAGING_BACKEND_API_URL (e.g. https://staging-api.plugio.app) in .env.local."
+      );
+    }
+    if (!apiKey) {
+      throw new StoreApiError(
+        "STAGING_ADMIN_API_KEY (or ADMIN_API_KEY) is not configured for the active Staging environment."
+      );
+    }
+  } else {
+    backend = process.env.BACKEND_API_URL || (isDev ? "http://localhost:8080" : undefined);
+    apiKey = process.env.ADMIN_API_KEY;
+
+    if (!backend) {
+      throw new StoreApiError("BACKEND_API_URL is not configured.");
+    }
+    if (!apiKey) {
+      throw new StoreApiError("ADMIN_API_KEY is not configured.");
+    }
+  }
+
+  return { backend: backend.replace(/\/+$/, ""), apiKey };
+}
+
+async function call<T>(actor: string, path: string, init?: { method?: string; body?: unknown }): Promise<T> {
+  const { backend, apiKey } = await resolveBackendConfig();
+
+  let res: Response;
+  try {
+    res = await fetch(`${backend}/api/admin/store${path}`, {
+      method: init?.method ?? "GET",
+      headers: {
+        "X-Admin-Api-Key": apiKey,
+        "X-Admin-Actor": actor,
+        Accept: "application/json",
+        ...(init?.body !== undefined ? { "Content-Type": "application/json" } : {}),
+      },
+      body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
+      cache: "no-store",
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Network error";
+    throw new StoreApiError(`Could not reach backend (${backend}): ${message}`);
+  }
 
   const json = (await res.json().catch(() => null)) as { data?: T; message?: string } | null;
   if (!res.ok) {
+    if (res.status === 401) {
+      if (json?.message === "Authentication required") {
+        throw new StoreApiError(
+          `Store operations are not available on this backend (${backend}). If you are testing, please switch the Database toggle to Staging.`
+        );
+      }
+      throw new StoreApiError(json?.message || "Invalid or unauthorized admin API key");
+    }
+    if (res.status === 403) {
+      throw new StoreApiError("Access denied. You do not have permission to access Store operations.");
+    }
     throw new StoreApiError(json?.message || `Backend request failed (${res.status})`);
   }
   return json?.data as T;
