@@ -80,22 +80,19 @@ async function resolveBackendConfig(): Promise<{ backend: string; apiKey: string
   let apiKey: string | undefined;
 
   if (isStaging) {
-    backend = process.env.STAGING_BACKEND_API_URL;
+    // When staging is active:
+    // If explicitly configured, use STAGING_BACKEND_API_URL.
+    // In local dev, use BACKEND_API_URL or localhost.
+    // In deployed admin panel, automatically default to https://staging-api.plugio.app.
+    backend =
+      process.env.STAGING_BACKEND_API_URL ||
+      (isDev ? process.env.BACKEND_API_URL || "http://localhost:8080" : "https://staging-api.plugio.app");
+
     apiKey = process.env.STAGING_ADMIN_API_KEY || process.env.ADMIN_API_KEY;
 
-    // In local development, fall back to localhost if staging backend isn't explicitly configured
-    if (!backend && isDev) {
-      backend = process.env.BACKEND_API_URL || "http://localhost:8080";
-    }
-
-    if (!backend) {
-      throw new StoreApiError(
-        "STAGING_BACKEND_API_URL is not configured. When Staging database context is active, configure STAGING_BACKEND_API_URL (e.g. https://staging-api.plugio.app) in .env.local."
-      );
-    }
     if (!apiKey) {
       throw new StoreApiError(
-        "STAGING_ADMIN_API_KEY (or ADMIN_API_KEY) is not configured for the active Staging environment."
+        "ADMIN_API_KEY is not configured. Please set ADMIN_API_KEY or STAGING_ADMIN_API_KEY in .env.local."
       );
     }
   } else {
