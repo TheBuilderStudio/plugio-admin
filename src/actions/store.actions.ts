@@ -91,12 +91,75 @@ export async function updateCommissionPolicyAction(digital: string, bookings: st
   }
 }
 
+/** Saves the minimum payout (whole rupees). The server validates the range, checks the version and audits it. */
+export async function updatePayoutSettingsAction(minRupees: string, version: number): Promise<ActionResult> {
+  try {
+    const session = await requireWritableAdmin();
+    const adminEmail = session.user?.email;
+    if (!adminEmail) return { success: false, message: "No admin email on session." };
+    const text = minRupees.trim();
+    if (!/^\d{1,6}$/.test(text)) return { success: false, message: "Enter a whole number of rupees." };
+    if (!Number.isInteger(version) || version < 0) return { success: false, message: "Reload the page and try again." };
+    const saved = await storeApi.updatePayoutSettings(adminEmail, { minPayoutMinor: Number(text) * 100, version });
+    logAdminAction({ action: "STORE_PAYOUT_SETTINGS_UPDATE", adminEmail, details: `min=${saved.minPayoutMinor / 100} v${saved.version}` });
+    revalidatePath("/admin/store");
+    return { success: true, message: "Minimum payout saved. It applies to new requests now." };
+  } catch (error) {
+    return fail(error, "Could not save the payout rules.");
+  }
+}
+
 export async function markPayoutPaidAction(id: string, reference: string): Promise<ActionResult> {
   return run(id, { reference }, "STORE_PAYOUT_PAID", "Payout marked as paid.", (a, c) => storeApi.markPaid(a, id, c.reference));
 }
 
 export async function rejectPayoutAction(id: string, reason: string): Promise<ActionResult> {
   return run(id, { reason }, "STORE_PAYOUT_REJECT", "Payout rejected and balance restored.", (a, c) => storeApi.rejectPayout(a, id, c.reason));
+}
+
+export async function dismissExceptionAction(id: string, reason: string): Promise<ActionResult> {
+  return run(id, { reason }, "STORE_EXCEPTION_DISMISS", "Closed. The held amount is released to the seller.", (a, c) => storeApi.dismissException(a, id, c.reason));
+}
+
+/** One full refund to the customer for a session the creator cancelled. Moves money; Finance or Super admin only. */
+export async function refundCancelledSessionAction(id: string): Promise<ActionResult> {
+  try {
+    const session = await requireWritableAdmin();
+    const adminEmail = session.user?.email;
+    if (!adminEmail) return { success: false, message: "No admin email on session." };
+    if (!ID_PATTERN.test(id)) return { success: false, message: "Invalid id." };
+    const out = await storeApi.refundCancelledSession(adminEmail, id);
+    logAdminAction({ action: "STORE_SESSION_REFUND", adminEmail, details: `${id} ${out.result}` });
+    revalidatePath("/admin/store");
+    return {
+      success: true,
+      message:
+        out.result === "REFUNDED"
+          ? "Customer refunded in full. The creator's share was debited and the platform fee returned."
+          : "Refund approved. The gateway has not confirmed it yet; it is retried every minute and this item closes by itself.",
+    };
+  } catch (error) {
+    return fail(error, "Could not refund this session.");
+  }
+}
+
+/** A dispute the gateway ruled against us: debits the creator and returns the platform fee. Moves money; Finance or Super admin only. */
+export async function confirmDisputeLossAction(id: string): Promise<ActionResult> {
+  try {
+    const session = await requireWritableAdmin();
+    const adminEmail = session.user?.email;
+    if (!adminEmail) return { success: false, message: "No admin email on session." };
+    if (!ID_PATTERN.test(id)) return { success: false, message: "Invalid id." };
+    const out = await storeApi.confirmDisputeLoss(adminEmail, id);
+    logAdminAction({ action: "STORE_DISPUTE_LOSS", adminEmail, details: `${id} debited=${out.debitedMinor} fee=${out.feeReturnedMinor}` });
+    revalidatePath("/admin/store");
+    return {
+      success: true,
+      message: `Loss confirmed. The creator was debited ₹${out.debitedMinor / 100} and the platform fee (₹${out.feeReturnedMinor / 100}) was returned.${out.accessBlocked ? " Access was blocked." : ""}`,
+    };
+  } catch (error) {
+    return fail(error, "Could not confirm this loss.");
+  }
 }
 
 export async function suspendProductAction(id: string, reason: string): Promise<ActionResult> {

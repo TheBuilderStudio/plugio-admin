@@ -15,6 +15,7 @@ import {
   Tags,
   Eye,
   Store,
+  Star,
 } from "lucide-react";
 import { logoutAction } from "@/actions/user.actions";
 import { cn } from "@/lib/utils";
@@ -110,6 +111,7 @@ export function AdminSidebar({
     { label: "Command", href: "/admin/dashboard", icon: LayoutDashboard },
     { label: "Queue", href: "/admin/beta?status=PENDING", icon: ClipboardList, badge: pendingBeta },
     { label: "Users", href: "/admin/users", icon: Users },
+    { label: "Reviews", href: "/admin/reviews", icon: Star },
   ];
   const moneyNav: NavItem[] = [
     { label: "Plans", href: "/admin/plans", icon: Tags },

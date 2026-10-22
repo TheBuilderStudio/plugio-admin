@@ -1,11 +1,13 @@
 import { requireAdmin } from "@/lib/security";
+import { signAdminToken } from "@/lib/admin-token";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
     // 1. Authenticate that the user is an authorized admin
-    await requireAdmin();
+    const session = await requireAdmin();
+    const adminEmail = session.user?.email ?? "";
 
     const backendUrl = process.env.BACKEND_API_URL || "http://localhost:8080";
     const apiKey = process.env.ADMIN_API_KEY;
@@ -14,10 +16,13 @@ export async function GET(request: Request) {
       return new Response("Admin log stream is not configured", { status: 503 });
     }
 
+    const token = signAdminToken({ email: adminEmail, method: "GET", path: "/api/admin/logs/stream" });
+
     // 2. Open Server-Sent Events stream connection to the Spring Boot backend
     const response = await fetch(`${backendUrl}/api/admin/logs/stream`, {
       headers: {
         "X-Admin-Api-Key": apiKey,
+        ...(token ? { "X-Admin-Token": token } : {}),
       },
       cache: "no-store",
       signal: request.signal,
