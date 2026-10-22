@@ -1,7 +1,7 @@
 "use server";
 
 /**
- * Plugio Admin — Digital Store actions (payouts, refunds, takedown).
+ * Plugio Admin — Digital Store actions (payouts, takedown).
  * Every action requires a writable admin session and is recorded in the admin audit log.
  */
 
@@ -97,10 +97,6 @@ export async function markPayoutPaidAction(id: string, reference: string): Promi
 
 export async function rejectPayoutAction(id: string, reason: string): Promise<ActionResult> {
   return run(id, { reason }, "STORE_PAYOUT_REJECT", "Payout rejected and balance restored.", (a, c) => storeApi.rejectPayout(a, id, c.reason));
-}
-
-export async function refundOrderAction(id: string, reason: string): Promise<ActionResult> {
-  return run(id, { reason }, "STORE_REFUND", "Order refunded. The buyer's access has ended.", (a, c) => storeApi.refund(a, id, c.reason));
 }
 
 export async function suspendProductAction(id: string, reason: string): Promise<ActionResult> {

@@ -10,7 +10,6 @@ import { CommissionPolicyForm } from "@/components/store/CommissionPolicyForm";
 import { formatDateTime } from "@/lib/utils";
 import {
   markPayoutPaidAction,
-  refundOrderAction,
   rejectPayoutAction,
   suspendProductAction,
   unsuspendProductAction,
@@ -23,7 +22,7 @@ const PAGE_SIZE = 50;
 type Tab = "payouts" | "orders" | "products" | "commission";
 const TABS: { id: Tab; label: string }[] = [
   { id: "payouts", label: "Payouts" },
-  { id: "orders", label: "Orders & refunds" },
+  { id: "orders", label: "Orders" },
   { id: "products", label: "Products" },
   { id: "commission", label: "Commission policy" },
 ];
@@ -71,7 +70,7 @@ export default async function StoreAdminPage({ searchParams }: StorePageProps) {
       <AdminPageHeader
         kicker="Digital store"
         title="Store operations"
-        description="Pay out seller balances, refund orders and take down products. Every action is audited."
+        description="Pay out seller balances and take down products. Every action is audited."
       />
       <FilterPills items={TABS.map((t) => ({ href: `/admin/store?tab=${t.id}`, label: t.label, active: tab === t.id }))} />
 
@@ -180,7 +179,7 @@ async function OrdersTab({ actor, page }: { actor: string; page: number }) {
         <div className="overflow-x-auto">
           <table className="admin-table">
             <thead>
-              <tr><th>Product</th><th>Seller</th><th>Buyer</th><th>Amount</th><th>Status</th><th>Action</th></tr>
+              <tr><th>Product</th><th>Seller</th><th>Buyer</th><th>Amount</th><th>Status</th></tr>
             </thead>
             <tbody>
               {result.items.map((o) => (
@@ -191,14 +190,7 @@ async function OrdersTab({ actor, page }: { actor: string; page: number }) {
                   <td className="tabular-nums">{inr(o.amountMinor)}<p className="text-[11px] text-(--ink-mute)">fee {inr(o.platformFeeMinor)}</p></td>
                   <td className="text-[12.5px]">
                     {o.status}
-                    {o.status === "REFUNDED" && <p className="text-[11px] text-(--ink-mute)">{o.refundReason}</p>}
-                    <p className="text-[11px] text-(--ink-mute)">{formatDateTime(o.refundedAt ?? o.paidAt)}</p>
-                  </td>
-                  <td>
-                    {o.status === "PAID" && (
-                      <StoreRowAction label="Refund" fieldLabel="Reason" tone="danger" confirmLabel="Refund in full"
-                        action={refundOrderAction.bind(null, o.id)} />
-                    )}
+                    <p className="text-[11px] text-(--ink-mute)">{formatDateTime(o.paidAt)}</p>
                   </td>
                 </tr>
               ))}

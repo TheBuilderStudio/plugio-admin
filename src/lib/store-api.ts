@@ -41,9 +41,7 @@ export interface StoreOrder {
   platformFeeMinor: number;
   currency: string;
   status: string;
-  refundReason: string | null;
   paidAt: string | null;
-  refundedAt: string | null;
 }
 
 export interface StoreProduct {
@@ -161,8 +159,6 @@ export const storeApi = {
   rejectPayout: (actor: string, id: string, reason: string) =>
     call<StorePayout>(actor, `/payouts/${encodeURIComponent(id)}/reject`, { method: "POST", body: { reason } }),
   orders: (actor: string, page: number) => call<StorePage<StoreOrder>>(actor, `/orders?page=${page}`),
-  refund: (actor: string, id: string, reason: string) =>
-    call<string>(actor, `/orders/${encodeURIComponent(id)}/refund`, { method: "POST", body: { reason } }),
   products: (actor: string, page: number) => call<StorePage<StoreProduct>>(actor, `/products?page=${page}`),
   suspend: (actor: string, id: string, reason: string) =>
     call<null>(actor, `/products/${encodeURIComponent(id)}/suspend`, { method: "POST", body: { reason } }),
