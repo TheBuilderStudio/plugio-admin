@@ -197,6 +197,29 @@ export interface SellerStatement {
   page: { rows: SellerStatementRow[]; page: number; size: number; total: number; totalPages: number };
 }
 
+export type KycGate = "NOT_REQUIRED" | "APPROVED" | "NOT_SUBMITTED" | "PENDING" | "REJECTED" | "STALE";
+
+/** A creator's payout account and identity check, available even before they submit a PAN. */
+export interface SellerPayoutAccount {
+  sellerId: string;
+  sellerName: string | null;
+  sellerEmail: string | null;
+  hasPayoutAccount: boolean;
+  method: "UPI" | "BANK" | null;
+  accountHolder: string | null;
+  upiId: string | null;
+  bankAccount: string | null;
+  ifsc: string | null;
+  payoutUpdatedAt: string | null;
+  gate: KycGate;
+  legalName: string | null;
+  pan: string | null;
+  nameMatchesPayout: boolean | null;
+  rejectReason: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+}
+
 export interface PayoutSettings {
   minPayoutMinor: number;
   withdrawAllFloorMinor: number;
@@ -487,6 +510,8 @@ export const storeApi = {
     call<StorePage<PaymentExceptionRow>>(actor, `/exceptions?activeOnly=${activeOnly}&page=${page}`),
   dismissException: (actor: string, id: string, reason: string) =>
     call<PaymentExceptionRow>(actor, `/exceptions/${encodeURIComponent(id)}/dismiss`, { method: "POST", body: { reason } }),
+  sellerPayoutAccount: (actor: string, sellerId: string) =>
+    call<SellerPayoutAccount>(actor, `/sellers/${encodeURIComponent(sellerId)}/payout-account`),
   sellerStatement: (actor: string, sellerId: string, page: number, source?: "STORE" | "BOOKING") =>
     call<SellerStatement>(
       actor,

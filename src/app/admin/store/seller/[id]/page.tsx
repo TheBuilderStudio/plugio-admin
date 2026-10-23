@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Store } from "lucide-react";
 import { requireCapability } from "@/lib/admin-access";
-import { storeApi } from "@/lib/store-api";
+import { storeApi, type KycGate, type SellerPayoutAccount } from "@/lib/store-api";
 import { validatePage } from "@/lib/validation";
 import { AdminPage, AdminPageHeader, AdminCard } from "@/components/ui/page-shell";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -32,9 +32,17 @@ export default async function SellerStatementPage({
   const source = rawSource === "STORE" || rawSource === "BOOKING" ? rawSource : undefined;
 
   let statement;
+  let account: SellerPayoutAccount | null = null;
+  let accountError: string | null = null;
   try {
     if (!ID_PATTERN.test(id)) throw new Error("Invalid seller id.");
     statement = await storeApi.sellerStatement(actor, id, page, source);
+    // A failure here must not hide the statement: show the problem inside the card instead.
+    try {
+      account = await storeApi.sellerPayoutAccount(actor, id);
+    } catch (e) {
+      accountError = e instanceof Error ? e.message : "Unknown error";
+    }
   } catch (e) {
     return (
       <AdminPage>
@@ -77,6 +85,8 @@ export default async function SellerStatementPage({
           </p>
         </AdminCard>
       )}
+
+      <PayoutAccountPanel account={account} error={accountError} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {cards.map((c) => (
@@ -197,5 +207,81 @@ export default async function SellerStatementPage({
         />
       </AdminCard>
     </AdminPage>
+  );
+}
+
+const GATE_LABEL: Record<KycGate, { text: string; cls: string }> = {
+  APPROVED: { text: "Identity verified", cls: "bg-emerald-50 text-emerald-700" },
+  PENDING: { text: "Identity check waiting for review", cls: "bg-amber-50 text-amber-700" },
+  REJECTED: { text: "Identity check rejected", cls: "bg-red-50 text-red-700" },
+  STALE: { text: "Payout account changed after verification", cls: "bg-amber-50 text-amber-700" },
+  NOT_SUBMITTED: { text: "Identity check not submitted", cls: "bg-stone-100 text-stone-700" },
+  NOT_REQUIRED: { text: "Identity check not required", cls: "bg-stone-100 text-stone-700" },
+};
+
+function PayoutAccountPanel({ account, error }: { account: SellerPayoutAccount | null; error: string | null }) {
+  if (!account) {
+    return (
+      <AdminCard>
+        <p className="text-[13px] font-semibold text-red-700">Could not load the payout account</p>
+        <p className="mt-1 text-[12.5px] text-(--ink-soft)">{error ?? "Unknown error"}</p>
+      </AdminCard>
+    );
+  }
+  const gate = GATE_LABEL[account.gate] ?? GATE_LABEL.NOT_SUBMITTED;
+  const rows: [string, string | null][] = account.hasPayoutAccount
+    ? [
+        ["Method", account.method === "UPI" ? "UPI" : "Bank transfer"],
+        ["Account holder", account.accountHolder],
+        ...(account.method === "UPI"
+          ? ([["UPI ID", account.upiId]] as [string, string | null][])
+          : ([["Account number", account.bankAccount], ["IFSC", account.ifsc]] as [string, string | null][])),
+        ["Last changed", account.payoutUpdatedAt ? formatDateTime(account.payoutUpdatedAt) : null],
+      ]
+    : [];
+  return (
+    <AdminCard>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[13px] font-semibold">Payout account and identity</p>
+        <span className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold ${gate.cls}`}>{gate.text}</span>
+      </div>
+      <div className="mt-3 grid gap-4 sm:grid-cols-2">
+        <div>
+          <p className="text-[11.5px] text-(--ink-mute)">Where the money goes</p>
+          {account.hasPayoutAccount ? (
+            <dl className="mt-1 space-y-1 text-[12.5px]">
+              {rows.map(([k, v]) => (
+                <div key={k} className="flex gap-2">
+                  <dt className="w-28 shrink-0 text-(--ink-mute)">{k}</dt>
+                  <dd className="font-mono break-all">{v ?? "—"}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p className="mt-1 text-[12.5px] text-(--ink-soft)">This creator has not added a payout account yet.</p>
+          )}
+        </div>
+        <div>
+          <p className="text-[11.5px] text-(--ink-mute)">Identity check</p>
+          {account.legalName ? (
+            <dl className="mt-1 space-y-1 text-[12.5px]">
+              <div className="flex gap-2"><dt className="w-28 shrink-0 text-(--ink-mute)">Legal name</dt><dd>{account.legalName}</dd></div>
+              <div className="flex gap-2"><dt className="w-28 shrink-0 text-(--ink-mute)">PAN</dt><dd className="font-mono">{account.pan}</dd></div>
+              {account.nameMatchesPayout !== null && (
+                <p className={account.nameMatchesPayout ? "text-emerald-700" : "font-semibold text-red-700"}>
+                  {account.nameMatchesPayout ? "Name matches the account holder" : "Name differs from the account holder"}
+                </p>
+              )}
+              {account.rejectReason && account.gate === "REJECTED" && <p className="text-red-700">Reason: {account.rejectReason}</p>}
+              {(account.gate === "PENDING" || account.gate === "STALE") && (
+                <Link href="/admin/store?tab=kyc" className="font-semibold text-brand-500 hover:underline">Open the verification queue</Link>
+              )}
+            </dl>
+          ) : (
+            <p className="mt-1 text-[12.5px] text-(--ink-soft)">No PAN submitted yet.</p>
+          )}
+        </div>
+      </div>
+    </AdminCard>
   );
 }

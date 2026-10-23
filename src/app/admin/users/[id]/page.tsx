@@ -396,6 +396,14 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
                   }
                 />
                 <InfoRow
+                  label="Payout account"
+                  value={
+                    <Link href={`/admin/store/seller/${user.id}`} className="font-semibold text-brand-500 hover:underline">
+                      View UPI / bank details
+                    </Link>
+                  }
+                />
+                <InfoRow
                   label="Payouts"
                   value={
                     <Link href={`/admin/store/seller/${user.id}`} className="font-semibold text-brand-500 hover:underline">
