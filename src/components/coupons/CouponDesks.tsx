@@ -27,7 +27,7 @@ export function CouponDesks({
 
   return (
     <div className="space-y-5">
-      <div className="inline-flex items-center gap-1 rounded-xl border border-(--line) bg-[#F7F4EE] p-1">
+      <div className="inline-flex items-center gap-1 rounded-xl border border-(--line) bg-(--hover) p-1">
         <button
           type="button"
           onClick={() => setDesk("trial")}

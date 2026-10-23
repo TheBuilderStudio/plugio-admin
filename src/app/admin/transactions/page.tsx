@@ -43,7 +43,6 @@ export default async function TransactionsPage({ searchParams }: Props) {
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="Money"
         title="Transactions"
         description="Every payment in one list." hint="Store orders, paid sessions and subscriptions. Amounts keep their own currency."
         actions={
@@ -144,7 +143,7 @@ export default async function TransactionsPage({ searchParams }: Props) {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-[11.5px] font-semibold uppercase tracking-wide text-(--ink-mute)">
+    <label className="flex flex-col gap-1 text-[12px] font-medium text-(--ink-mute)">
       {label}
       {children}
     </label>

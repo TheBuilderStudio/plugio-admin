@@ -96,8 +96,7 @@ export default async function StoreAdminPage({ searchParams }: StorePageProps) {
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="Marketplace"
-        title="Store operations"
+        title="Digital store"
         description="Money, payouts and products." hint="Every action here is audited."
       />
       <FilterPills items={TABS.map((t) => ({ href: `/admin/store?tab=${t.id}`, label: t.label, active: tab === t.id }))} />
@@ -154,7 +153,8 @@ async function CommissionTab({ actor }: { actor: string }) {
     <AdminCard>
       <PayoutSettingsForm
         minRupees={String(payout.minPayoutMinor / 100)}
-        floorRupees={payout.withdrawAllFloorMinor / 100}
+        floorRupees={String(payout.withdrawAllFloorMinor / 100)}
+        holdDays={String(payout.holdDays ?? 7)}
         version={payout.version}
         updatedBy={payout.updatedBy}
         updatedAt={payout.updatedAt ? formatDateTime(payout.updatedAt) : null}
@@ -337,7 +337,7 @@ async function SettlementsTab({ actor, page, runRecon }: { actor: string; page: 
               <p className="text-[13px] font-semibold">Reconciliation</p>
               <p className="text-[12.5px] text-(--ink-soft)">Checks the ledger against orders and payouts. Run it when needed.</p>
             </div>
-            <Link href="/admin/store?tab=settlements&recon=1" className="rounded-lg border border-(--line) px-3 py-1.5 text-[12px] font-semibold hover:bg-[#F7F4EE]">Run reconciliation</Link>
+            <Link href="/admin/store?tab=settlements&recon=1" className="rounded-lg border border-(--line) px-3 py-1.5 text-[12px] font-semibold hover:bg-(--hover)">Run reconciliation</Link>
           </div>
         ) : (
           <>

@@ -23,7 +23,7 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
 
   return (
     <AdminPage>
-      <AdminPageHeader kicker="Money" title="Subscription payments" description="Plan checkout and webhook events." hint="Newest first. Store and session payments are under Transactions." />
+      <AdminPageHeader title="Subscription payments" description="Plan checkout and webhook events." hint="Newest first. Store and session payments are under Transactions." />
 
       <AdminCard padded={false}>
         <ListToolbar summary={resultSummary(result.page, result.pageSize, result.total, result.items.length)} />
@@ -76,7 +76,7 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
                         )}
                       </td>
                       <td>
-                        <code className="rounded-md bg-[#F7F4EE] px-1.5 py-0.5 text-[11px]">{log.provider}</code>
+                        <code className="rounded-md bg-(--hover) px-1.5 py-0.5 text-[11px]">{log.provider}</code>
                         {log.order_id ? (
                           <p className="mt-1 font-mono text-[11px] text-(--ink-mute)">{log.order_id}</p>
                         ) : null}

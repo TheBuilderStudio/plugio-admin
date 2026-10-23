@@ -34,7 +34,7 @@ export function StoreRowAction({
   const btn =
     tone === "danger"
       ? "border-red-300 text-red-700 hover:bg-red-50"
-      : "border-(--line) text-(--ink) hover:bg-[#F7F4EE]";
+      : "border-(--line) text-(--ink) hover:bg-(--hover)";
 
   if (!open) {
     return (

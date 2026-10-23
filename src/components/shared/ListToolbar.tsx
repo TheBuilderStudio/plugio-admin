@@ -57,7 +57,7 @@ export function ListToolbar({
       </div>
       )}
       {summary && (
-        <div className={`flex items-center justify-between gap-3 bg-[#FBF9F5] px-4 py-1.5 text-[12px] text-(--ink-mute) ${pills || search || actions ? "border-t border-(--line)" : ""}`}>
+        <div className={`flex items-center justify-between gap-3 bg-(--subtle) px-4 py-1.5 text-[12px] text-(--ink-mute) ${pills || search || actions ? "border-t border-(--line)" : ""}`}>
           <span aria-live="polite">{summary}</span>
           {clearHref && (
             <Link href={clearHref} className="inline-flex items-center gap-1 font-semibold text-(--ink-soft) hover:text-brand-500">

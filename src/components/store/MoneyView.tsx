@@ -58,7 +58,7 @@ export function MoneyView({ overview, creators, filters }: {
           </div>
           <a
             href={`/api/export/report/money-by-creator?${new URLSearchParams(cleanParams(keep)).toString()}`}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-(--line) px-3 py-1.5 text-[12.5px] font-semibold text-(--ink) hover:bg-[#F7F4EE]"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-(--line) px-3 py-1.5 text-[12.5px] font-semibold text-(--ink) hover:bg-(--hover)"
           >
             <Download className="size-3.5" /> Download CSV
           </a>
@@ -145,13 +145,13 @@ function RangeBar({ overview, filters }: { overview: MoneyOverview; filters: { f
     <AdminCard>
       <form method="get" className="flex flex-wrap items-end gap-2">
         <input type="hidden" name="tab" value="money" />
-        <label className="flex flex-col gap-1 text-[11.5px] font-semibold uppercase tracking-wide text-(--ink-mute)">
+        <label className="flex flex-col gap-1 text-[12px] font-medium text-(--ink-mute)">
           From <input type="date" name="from" defaultValue={filters.from ?? ""} className="admin-input" />
         </label>
-        <label className="flex flex-col gap-1 text-[11.5px] font-semibold uppercase tracking-wide text-(--ink-mute)">
+        <label className="flex flex-col gap-1 text-[12px] font-medium text-(--ink-mute)">
           To <input type="date" name="to" defaultValue={filters.to ?? ""} className="admin-input" />
         </label>
-        <label className="flex flex-col gap-1 text-[11.5px] font-semibold uppercase tracking-wide text-(--ink-mute)">
+        <label className="flex flex-col gap-1 text-[12px] font-medium text-(--ink-mute)">
           Source
           <select name="source" defaultValue={filters.source ?? ""} className="admin-input">
             <option value="">Digital products and bookings</option>
@@ -186,7 +186,7 @@ function WhereItWent({ t }: { t: MoneyTotals }) {
     <AdminCard>
       <div className="space-y-4">
         <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">Customers paid</p>
+          <p className="text-[12px] font-medium text-(--ink-mute)">Customers paid</p>
           <p className="mt-1 text-[30px] font-semibold tabular-nums tracking-tight text-(--ink)">{inr(t.grossMinor)}</p>
           <p className="text-[12px] text-(--ink-soft)">{t.saleCount} sale{t.saleCount === 1 ? "" : "s"}</p>
         </div>
@@ -202,7 +202,7 @@ function WhereItWent({ t }: { t: MoneyTotals }) {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {parts.map((p) => (
             <div key={p.key} className={`rounded-xl border p-3.5 ${p.c.soft}`}>
-              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-(--ink-mute)">
+              <p className="flex items-center gap-1.5 text-[12px] font-medium text-(--ink-mute)">
                 <span className={`size-2 rounded-full ${p.c.bar}`} /> {p.label}
               </p>
               <p className={`mt-1 text-[20px] font-semibold tabular-nums ${p.c.text}`}>{inr(p.value)}</p>
@@ -269,17 +269,17 @@ function GatewayCard({ g }: { g: MoneyOverview["gateway"] }) {
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <div className={`rounded-xl border p-3.5 ${C.gateway.soft}`}>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-(--ink-mute)">Charged to creators</p>
+            <p className="text-[12px] font-medium text-(--ink-mute)">Charged to creators</p>
             <p className={`mt-1 text-[20px] font-semibold tabular-nums ${C.gateway.text}`}>{inr(g.chargedToCreatorsMinor)}</p>
             <p className="text-[11.5px] text-(--ink-soft)">Gateway rate, after refunds</p>
           </div>
           <div className="rounded-xl border border-(--line) bg-(--paper) p-3.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-(--ink-mute)">Razorpay actually charged Plugio</p>
+            <p className="text-[12px] font-medium text-(--ink-mute)">Razorpay actually charged Plugio</p>
             <p className="mt-1 text-[20px] font-semibold tabular-nums text-(--ink)">{inr(g.actualFeeMinor)}</p>
             <p className="text-[11.5px] text-(--ink-soft)">Includes {inr(g.actualTaxMinor)} GST</p>
           </div>
           <div className={`rounded-xl border p-3.5 ${covering ? "border-red-200 bg-red-50" : "border-emerald-200 bg-emerald-50"}`}>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-(--ink-mute)">{covering ? "Plugio is covering" : "Left over for Plugio"}</p>
+            <p className="text-[12px] font-medium text-(--ink-mute)">{covering ? "Plugio is covering" : "Left over for Plugio"}</p>
             <p className={`mt-1 text-[20px] font-semibold tabular-nums ${covering ? "text-red-700" : "text-emerald-700"}`}>{inr(Math.abs(g.marginMinor))}</p>
             <p className="text-[11.5px] text-(--ink-soft)">{covering ? "Consider raising the gateway rate." : "Creators paid more than Razorpay charged."}{g.complete ? "" : " Partial."}</p>
           </div>
@@ -346,7 +346,7 @@ function Liabilities({ overview }: { overview: MoneyOverview }) {
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {tiles.map((x) => (
         <div key={x.label} className={`rounded-xl border p-4 ${x.tone.soft}`}>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-(--ink-mute)">{x.label}</p>
+          <p className="text-[12px] font-medium text-(--ink-mute)">{x.label}</p>
           <p className={`mt-1 text-[22px] font-semibold tabular-nums ${x.tone.text}`}>{x.value}</p>
           <p className="mt-1 text-[11.5px] text-(--ink-soft)">{x.hint}</p>
         </div>

@@ -50,19 +50,18 @@ export default async function ReportsPage({ searchParams }: Props) {
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="Money"
         title="Reports"
         description="Revenue, commission and payouts." hint="Default is the last 30 days, up to one year. Totals are per currency and never added across currencies."
       />
 
       <form method="get" className="flex flex-wrap items-end gap-2">
-        <label className="flex flex-col gap-1 text-[11.5px] font-semibold uppercase tracking-wide text-(--ink-mute)">
+        <label className="flex flex-col gap-1 text-[12px] font-medium text-(--ink-mute)">
           From <input type="date" name="from" defaultValue={range.from ?? ""} className="admin-input" />
         </label>
-        <label className="flex flex-col gap-1 text-[11.5px] font-semibold uppercase tracking-wide text-(--ink-mute)">
+        <label className="flex flex-col gap-1 text-[12px] font-medium text-(--ink-mute)">
           To <input type="date" name="to" defaultValue={range.to ?? ""} className="admin-input" />
         </label>
-        <label className="flex flex-col gap-1 text-[11.5px] font-semibold uppercase tracking-wide text-(--ink-mute)">
+        <label className="flex flex-col gap-1 text-[12px] font-medium text-(--ink-mute)">
           Source / Type
           <select name="kind" defaultValue={kind ?? ""} className="admin-input">
             <option value="">All sources</option>

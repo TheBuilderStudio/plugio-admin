@@ -24,7 +24,7 @@ export default function AdminError({
         <p className="mt-2 text-[14px] leading-relaxed text-(--ink-soft)">
           Usually a database timeout. Retry, or check Settings for connection health.
         </p>
-        <div className="mt-5 overflow-auto rounded-xl border border-(--line) bg-[#F7F4EE] p-3 text-left text-[12px] font-mono text-(--ink-soft)">
+        <div className="mt-5 overflow-auto rounded-xl border border-(--line) bg-(--hover) p-3 text-left text-[12px] font-mono text-(--ink-soft)">
           {error.message || "Unknown error"}
           {error.digest ? <p className="mt-1 text-[10px] text-(--ink-mute)">Digest: {error.digest}</p> : null}
         </div>

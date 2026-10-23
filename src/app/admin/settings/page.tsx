@@ -30,7 +30,6 @@ export default async function SettingsPage() {
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="Admin"
         title="Settings"
         description="Data source, your role and setup." hint="Health checks are on the Platform health page."
       />
@@ -97,7 +96,7 @@ export default async function SettingsPage() {
             {ADMIN_EMAILS.map((owner) => (
               <li
                 key={owner}
-                className="flex items-center justify-between rounded-xl border border-(--line) bg-[#F7F4EE] px-4 py-2.5"
+                className="flex items-center justify-between rounded-xl border border-(--line) bg-(--hover) px-4 py-2.5"
               >
                 <span className="truncate font-mono text-[13px] text-(--ink)">{owner}</span>
                 {owner === email ? (

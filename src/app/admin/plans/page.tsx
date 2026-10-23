@@ -33,7 +33,7 @@ export default async function PlansPage() {
 
   return (
     <AdminPage>
-      <AdminPageHeader kicker="Pricing" title="Plans" description="Prices and channel limits." hint="Checkout and the landing page read these. USD is international and INR is India (not converted). Payment methods are switched on in the Razorpay Dashboard." />
+      <AdminPageHeader title="Plans" description="Prices and channel limits." hint="Checkout and the landing page read these. USD is international and INR is India (not converted). Payment methods are switched on in the Razorpay Dashboard." />
 
       {loadError ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-medium text-amber-950">

@@ -166,7 +166,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
           <form onSubmit={handleCreate} className="space-y-3">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
               <div>
-                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
+                <label className="mb-1.5 block text-[12px] font-medium text-(--ink-mute)">
                   Code
                 </label>
                 <input
@@ -179,7 +179,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
+                <label className="mb-1.5 block text-[12px] font-medium text-(--ink-mute)">
                   Percent off
                 </label>
                 <input
@@ -193,7 +193,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
+                <label className="mb-1.5 block text-[12px] font-medium text-(--ink-mute)">
                   Expires
                 </label>
                 <input
@@ -205,7 +205,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
+                <label className="mb-1.5 block text-[12px] font-medium text-(--ink-mute)">
                   Max people
                 </label>
                 <input
@@ -218,7 +218,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
+                <label className="mb-1.5 block text-[12px] font-medium text-(--ink-mute)">
                   Note
                 </label>
                 <input
@@ -244,7 +244,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
               </p>
             ) : null}
             {previewLine ? (
-              <div className="rounded-xl border border-(--line) bg-[#F7F4EE] px-3 py-2 font-mono text-[12px] leading-relaxed text-(--ink)">
+              <div className="rounded-xl border border-(--line) bg-(--hover) px-3 py-2 font-mono text-[12px] leading-relaxed text-(--ink)">
                 {previewLine}
               </div>
             ) : (
@@ -381,7 +381,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                                 type="button"
                                 onClick={() => setEditingId(null)}
                                 disabled={isPending}
-                                className="rounded-lg bg-[#F7F4EE] p-1.5 text-(--ink-soft) hover:bg-[#EDE8DF]"
+                                className="rounded-lg bg-(--hover) p-1.5 text-(--ink-soft) hover:bg-(--sunken)"
                                 title="Cancel"
                               >
                                 <X className="h-4 w-4" />
@@ -393,7 +393,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
                                 type="button"
                                 onClick={() => startEdit(coupon)}
                                 disabled={isPending}
-                                className="rounded-lg bg-[#F7F4EE] p-1.5 text-(--ink-soft) hover:bg-[#EDE8DF] disabled:opacity-50"
+                                className="rounded-lg bg-(--hover) p-1.5 text-(--ink-soft) hover:bg-(--sunken) disabled:opacity-50"
                                 title="Edit"
                               >
                                 <Pencil className="h-4 w-4" />

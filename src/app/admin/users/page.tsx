@@ -60,7 +60,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
   };
   return (
     <AdminPage>
-      <AdminPageHeader kicker="People" title="Creators" description="Everyone who has signed in." hint="Use the filters to find who needs a nudge: approved but no trial, trialing but never published, or trial ending." />
+      <AdminPageHeader title="Creators" description="Everyone who has signed in." hint="Use the filters to find who needs a nudge: approved but no trial, trialing but never published, or trial ending." />
       <Suspense fallback={null}>
         <SavedViews pageKey="creators" />
       </Suspense>

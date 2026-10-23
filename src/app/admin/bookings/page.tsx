@@ -48,7 +48,6 @@ export default async function BookingsPage({ searchParams }: Props) {
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="Marketplace"
         title="Sessions"
         description="Sessions creators sell." hint="Watch for refunds that failed, unpaid holds, broken meeting links and creators who keep cancelling."
       />

@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowLeft,
   Mail,
   Calendar,
   Instagram,
@@ -114,14 +113,6 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
 
   return (
     <AdminPage>
-      <Link
-        href="/admin/users"
-        className="inline-flex items-center gap-2 text-[13px] font-medium text-(--ink-soft) transition hover:text-(--ink)"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Creators
-      </Link>
-
       <AdminCard>
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
           {user.picture ? (
@@ -170,7 +161,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
       {chaseHint ? (
         <section className="overflow-hidden rounded-[14px] border border-amber-200/90 bg-linear-to-br from-amber-50 to-(--paper) shadow-(--shadow-paper)">
           <div className="border-b border-amber-100 px-5 py-4 sm:px-6">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-500">
+            <p className="text-[12px] font-medium text-brand-500">
               Chase this creator
             </p>
             <p className="mt-1 text-[14px] font-semibold text-amber-950">{chaseHint}</p>
@@ -249,8 +240,8 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
               )}
             </div>
             {user.application_message ? (
-              <div className="mt-4 rounded-xl border border-(--line) bg-[#F7F4EE] p-4">
-                <p className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
+              <div className="mt-4 rounded-xl border border-(--line) bg-(--hover) p-4">
+                <p className="mb-1.5 text-[12px] font-medium text-(--ink-mute)">
                   Message
                 </p>
                 <p className="text-[13.5px] leading-relaxed text-(--ink)">
@@ -289,14 +280,14 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           </div>
           {paymentEvents.length > 0 && (
             <div className="mt-5 border-t border-(--line) pt-4">
-              <p className="mb-3 text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
+              <p className="mb-3 text-[12px] font-medium text-(--ink-mute)">
                 Payment history
               </p>
               <div className="space-y-2">
                 {paymentEvents.map((evt) => (
                   <div
                     key={evt.id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-(--line) bg-[#F7F4EE] px-3 py-2.5"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-(--line) bg-(--hover) px-3 py-2.5"
                   >
                     <div>
                       <p className="text-[13px] font-semibold text-(--ink)">{evt.event_type}</p>
@@ -319,7 +310,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
               {user.social_accounts.map((account) => (
                 <div
                   key={account.id}
-                  className="flex items-center gap-3 rounded-xl border border-(--line) bg-[#F7F4EE] px-3 py-2.5"
+                  className="flex items-center gap-3 rounded-xl border border-(--line) bg-(--hover) px-3 py-2.5"
                 >
                   {account.provider === "YOUTUBE" && (
                     <Youtube className="h-4 w-4 shrink-0 text-(--ink-soft)" />
@@ -346,16 +337,16 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
         <AdminCard>
           <SectionTitle icon={FileVideo} title="Content" />
           <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="rounded-xl border border-(--line) bg-[#F7F4EE] px-4 py-4">
-              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
+            <div className="rounded-xl border border-(--line) bg-(--hover) px-4 py-4">
+              <p className="text-[12px] font-medium text-(--ink-mute)">
                 Published / scheduled
               </p>
               <p className="mt-1 text-[28px] font-semibold tabular-nums tracking-tight text-(--ink)">
                 {user.published_count}
               </p>
             </div>
-            <div className="rounded-xl border border-(--line) bg-[#F7F4EE] px-4 py-4">
-              <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
+            <div className="rounded-xl border border-(--line) bg-(--hover) px-4 py-4">
+              <p className="text-[12px] font-medium text-(--ink-mute)">
                 All content rows
               </p>
               <p className="mt-1 text-[28px] font-semibold tabular-nums tracking-tight text-(--ink)">
@@ -468,7 +459,7 @@ function SectionTitle({
 function ChaseStat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-amber-800/80">{label}</p>
+      <p className="text-[12px] font-medium text-amber-800/80">{label}</p>
       <p className="mt-1 text-lg font-semibold tabular-nums text-amber-950">{value}</p>
     </div>
   );

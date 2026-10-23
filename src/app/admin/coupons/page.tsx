@@ -47,7 +47,7 @@ export default async function CouponsPage() {
 
   return (
     <AdminPage>
-      <AdminPageHeader kicker="Pricing" title="Coupons" description="Trial and plan discount codes." hint="Trial coupons start a trial. Plan coupons take a percentage off a paid plan." />
+      <AdminPageHeader title="Coupons" description="Trial and plan discount codes." hint="Trial coupons start a trial. Plan coupons take a percentage off a paid plan." />
 
       {loadError ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-medium text-amber-950">

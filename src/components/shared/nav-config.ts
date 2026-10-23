@@ -69,20 +69,20 @@ function matchFor(pathname: string): NavEntry | undefined {
   }).sort((a, b) => b.href.length - a.href.length)[0];
 }
 
-/** Page title for the top bar; longest matching prefix wins. */
-export function titleFor(pathname: string): string {
-  if (pathname.startsWith("/admin/users/")) return "Creator";
-  if (pathname.startsWith("/admin/store/seller/")) return "Seller statement";
-  const match = matchFor(pathname);
-  if (match) return match.label;
-  if (pathname === "/admin") return "Overview";
-  return "Console";
+/** Page name for the top bar: the sidebar label, so the two can never disagree. */
+export function titleFor(pathname: string): string | null {
+  return matchFor(pathname)?.label ?? null;
 }
 
-/** The sector a page belongs to, for the breadcrumb in the top bar. Empty for the Overview. */
-export function sectorFor(pathname: string): NavGroup | null {
-  if (pathname.startsWith("/admin/users/")) return "People";
-  if (pathname.startsWith("/admin/store/seller/")) return "Marketplace";
-  const group = matchFor(pathname)?.group;
-  return group && group !== "Overview" ? group : null;
+export type Crumb = { label: string; href?: string };
+
+/**
+ * Breadcrumb for the top bar. Top-level pages return nothing: the sidebar already marks where you are and the
+ * page heading names it, so repeating either in the top bar is noise. Only detail pages get a trail back to their parent.
+ */
+export function crumbsFor(pathname: string): Crumb[] {
+  if (pathname.startsWith("/admin/users/")) return [{ label: "Creators", href: "/admin/users" }, { label: "Creator" }];
+  if (pathname.startsWith("/admin/store/seller/"))
+    return [{ label: "Digital store", href: "/admin/store?tab=payouts" }, { label: "Seller statement" }];
+  return [];
 }

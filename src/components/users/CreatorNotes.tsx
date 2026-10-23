@@ -65,7 +65,7 @@ export function CreatorNotes({ userId, notes, readOnly }: { userId: string; note
       ) : (
         <ul className="space-y-2">
           {notes.map((n) => (
-            <li key={n.id} className="rounded-xl border border-(--line) bg-[#F7F4EE] px-3.5 py-3">
+            <li key={n.id} className="rounded-xl border border-(--line) bg-(--hover) px-3.5 py-3">
               <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-(--ink)">{n.body}</p>
               <div className="mt-2 flex items-center justify-between gap-3 text-[11.5px] text-(--ink-mute)">
                 <span>

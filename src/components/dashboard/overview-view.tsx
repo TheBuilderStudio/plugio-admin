@@ -107,8 +107,8 @@ export function OverviewView({
 
       <header className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="admin-kicker">{todayLabel()}</p>
-          <h1 className="text-[26px] font-semibold tracking-tight text-(--ink) sm:text-[30px]">
+          <p className="text-[12.5px] text-(--ink-mute)">{todayLabel()}</p>
+          <h1 className="text-[20px] font-semibold tracking-tight text-(--ink)">
             {greeting()}{firstName ? `, ${firstName}` : ""}
           </h1>
         </div>
@@ -124,16 +124,16 @@ export function OverviewView({
       <ActionCenter items={needs} />
 
       <section aria-label="Key numbers" className={cn("grid grid-cols-2 gap-3 lg:grid-cols-3", canViewMoney ? "xl:grid-cols-6" : "xl:grid-cols-4")}>
-        <Kpi sector="People" dot="bg-brand-500" label="Creators" value={access.total_users.toLocaleString()} sub={`+${access.new_last_7_days} this week`} href="/admin/users" />
-        <Kpi sector="People" dot="bg-brand-500" label="Waiting for access" value={access.pending_requests.toLocaleString()} sub={access.pending_requests > 0 ? "Needs a decision" : "Queue is clear"} href="/admin/beta?status=PENDING" warn={access.pending_requests > 0} />
-        <Kpi sector="Money" dot="bg-emerald-500" label="Paying plans" value={paidLive.toLocaleString()} sub={`${plans.trialing} on trial`} href="/admin/users?filter=PAID" />
+        <Kpi dot="bg-brand-500" label="Creators" value={access.total_users.toLocaleString()} sub={`+${access.new_last_7_days} this week`} href="/admin/users" />
+        <Kpi dot="bg-brand-500" label="Waiting for access" value={access.pending_requests.toLocaleString()} sub={access.pending_requests > 0 ? "Needs a decision" : "Queue is clear"} href="/admin/beta?status=PENDING" warn={access.pending_requests > 0} />
+        <Kpi dot="bg-emerald-500" label="Paying plans" value={paidLive.toLocaleString()} sub={`${plans.trialing} on trial`} href="/admin/users?filter=PAID" />
         {canViewMoney && (
           <>
-            <Kpi sector="Money" dot="bg-emerald-500" label="Subscriptions, 30 days" value={formatInr(revenue.collected_30d_inr)} sub={formatUsd(revenue.collected_30d_usd)} href="/admin/payments" />
-            <Kpi sector="Marketplace" dot="bg-sky-500" label="Creator sales, 30 days" value={formatMinor(marketGross, "INR")} sub={`Plugio keeps ${formatMinor(marketFee, "INR")}`} href="/admin/store" />
+            <Kpi dot="bg-emerald-500" label="Subscriptions, 30 days" value={formatInr(revenue.collected_30d_inr)} sub={formatUsd(revenue.collected_30d_usd)} href="/admin/payments" />
+            <Kpi dot="bg-sky-500" label="Creator sales, 30 days" value={formatMinor(marketGross, "INR")} sub={`Plugio keeps ${formatMinor(marketFee, "INR")}`} href="/admin/store" />
           </>
         )}
-        <Kpi sector="Platform" dot="bg-violet-500" label="Platform" value={incidents.length > 0 ? `${incidents.length} issue${incidents.length === 1 ? "" : "s"}` : "Healthy"} sub={incidents.length > 0 ? "See what is failing" : "No failures"} href="/admin/health" warn={incidents.length > 0} />
+        <Kpi dot="bg-violet-500" label="Platform" value={incidents.length > 0 ? `${incidents.length} issue${incidents.length === 1 ? "" : "s"}` : "Healthy"} sub={incidents.length > 0 ? "See what is failing" : "No failures"} href="/admin/health" warn={incidents.length > 0} />
       </section>
 
       {trends ? (
@@ -164,7 +164,7 @@ export function OverviewView({
                 <ul className="divide-y divide-(--line)">
                   {pendingQueue.slice(0, 5).map((req) => (
                     <li key={req.id}>
-                      <Link href={`/admin/users/${req.id}`} className="flex items-center gap-3 px-5 py-3 transition hover:bg-[#FAF7F2]">
+                      <Link href={`/admin/users/${req.id}`} className="flex items-center gap-3 px-5 py-3 transition hover:bg-(--subtle)">
                         <Avatar src={req.picture} name={req.name} />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[13.5px] font-semibold text-(--ink)">{req.name ?? "Unknown"}</p>
@@ -268,7 +268,7 @@ export function OverviewView({
                 footer={`${content.created_7d} created this week`}
               />
               <div className="bg-(--paper) p-5">
-                <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">Watch</p>
+                <p className="text-[12px] font-medium text-(--ink-mute)">Watch</p>
                 <ul className="mt-3 space-y-2.5">
                   <WatchRow label="Sync failed" value={social.sync_failed} href="/admin/health" />
                   <WatchRow label="Publish failed" value={content.failed} href="/admin/health" />
@@ -318,29 +318,28 @@ function todayLabel(): string {
 function SectionHead({ title, href, link }: { title: string; href?: string; link?: string }) {
   return (
     <div className="flex items-center gap-3">
-      <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-(--ink-soft)">{title}</h2>
+      <h2 className="text-[14px] font-semibold tracking-tight text-(--ink)">{title}</h2>
       <span aria-hidden className="h-px flex-1 bg-(--line)" />
       {href && link ? <Link href={href} className="text-[12.5px] font-semibold text-brand-500 hover:underline">{link} →</Link> : null}
     </div>
   );
 }
 
-function Kpi({ sector, dot, label, value, sub, href, warn }: {
-  sector: string; dot: string; label: string; value: string; sub: string; href: string; warn?: boolean;
+function Kpi({ dot, label, value, sub, href, warn }: {
+  dot: string; label: string; value: string; sub: string; href: string; warn?: boolean;
 }) {
   return (
     <Link
       href={href}
       className={cn(
-        "admin-card group block p-4 transition hover:border-brand-500/40 hover:shadow-md",
-        warn && "border-amber-300/80 bg-linear-to-br from-amber-50 to-(--paper)"
+        "admin-card group block px-4 py-3.5 transition hover:border-(--line-strong) hover:shadow-[0_2px_6px_rgba(16,24,40,0.06)]",
+        warn && "border-amber-300/70 bg-amber-50/60"
       )}
     >
-      <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-(--ink-mute)">
+      <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-(--ink-soft)">
         <span aria-hidden className={cn("h-1.5 w-1.5 rounded-full", dot)} />
-        {sector}
+        {label}
       </p>
-      <p className="mt-2 text-[12.5px] font-medium text-(--ink-soft)">{label}</p>
       <p className={cn("mt-0.5 text-[24px] font-semibold tabular-nums tracking-tight", warn ? "text-amber-900" : "text-(--ink)")}>{value}</p>
       <p className="mt-0.5 truncate text-[12px] text-(--ink-soft)">{sub}</p>
     </Link>
@@ -489,7 +488,7 @@ function PlatformBlock({
 }) {
   return (
     <div className="bg-(--paper) p-5">
-      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">{title}</p>
+      <p className="text-[12px] font-medium text-(--ink-mute)">{title}</p>
       <ul className="mt-3 space-y-2">
         {rows.map((row) => {
           const Icon = row.icon;

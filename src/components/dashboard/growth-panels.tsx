@@ -34,7 +34,7 @@ export function FunnelPanel({ steps }: { steps: FunnelStep[] }) {
           return (
             <li key={s.key}>
               {s.href ? (
-                <Link href={s.href} className="block transition hover:bg-[#FAF7F2]">
+                <Link href={s.href} className="block transition hover:bg-(--subtle)">
                   {row}
                 </Link>
               ) : (

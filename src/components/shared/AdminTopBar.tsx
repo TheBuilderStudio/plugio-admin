@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ClipboardList, Menu, Search } from "lucide-react";
 import { useDbContext } from "@/components/shared/DatabaseSwitch";
-import { sectorFor, titleFor } from "@/components/shared/nav-config";
+import { crumbsFor, titleFor } from "@/components/shared/nav-config";
 import { cn } from "@/lib/utils";
 
 interface AdminTopBarProps {
@@ -20,7 +20,7 @@ export function AdminTopBar({ isReadOnly = false, pendingBeta = 0, onOpenMenu, o
   const prod = dbContext === "production";
 
   return (
-    <header className="z-30 flex h-14 shrink-0 items-center gap-3 border-b border-(--line) bg-(--canvas) px-4 sm:px-6 lg:px-8">
+    <header className="z-30 flex h-14 shrink-0 items-center gap-3 border-b border-(--line) bg-(--paper) px-4 sm:px-6 lg:px-8">
       <button
         type="button"
         onClick={onOpenMenu}
@@ -31,23 +31,31 @@ export function AdminTopBar({ isReadOnly = false, pendingBeta = 0, onOpenMenu, o
       </button>
 
       <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-1.5 truncate">
-        {sectorFor(pathname) && (
-          <>
-            <span className="hidden text-[13px] font-medium text-(--ink-mute) sm:inline">{sectorFor(pathname)}</span>
-            <span aria-hidden className="hidden text-(--ink-mute) sm:inline">/</span>
-          </>
+        {crumbsFor(pathname).map((c, i) => (
+          <span key={c.label} className="flex min-w-0 items-center gap-1.5">
+            {i > 0 && <span aria-hidden className="text-(--ink-mute)">/</span>}
+            {c.href ? (
+              <Link href={c.href} className="text-[13px] font-medium text-(--ink-mute) transition hover:text-(--ink)">
+                {c.label}
+              </Link>
+            ) : (
+              <span aria-current="page" className="truncate text-[13px] font-semibold text-(--ink)">{c.label}</span>
+            )}
+          </span>
+        ))}
+        {crumbsFor(pathname).length === 0 && (
+          <p className="truncate text-[16px] font-semibold tracking-tight text-(--ink)">{titleFor(pathname)}</p>
         )}
-        <p className="truncate text-[16px] font-semibold tracking-tight text-(--ink)">{titleFor(pathname)}</p>
       </nav>
 
       <button
         type="button"
         onClick={onOpenSearch}
-        className="hidden h-9 items-center gap-2 rounded-lg border border-(--line-strong) bg-(--paper) px-3 text-[12.5px] text-(--ink-mute) transition hover:border-brand-500/40 sm:flex"
+        className="hidden h-9 items-center gap-2 rounded-(--radius-control) border border-(--line-strong) bg-(--subtle) px-3 text-[12.5px] text-(--ink-mute) transition hover:bg-(--hover) sm:flex"
       >
         <Search className="h-3.5 w-3.5" />
         <span>Search creators or pages</span>
-        <kbd className="ml-4 rounded border border-(--line) px-1.5 text-[10px] font-semibold">⌘K</kbd>
+        <kbd className="ml-4 rounded border border-(--line-strong) bg-white px-1.5 text-[10px] font-semibold">⌘K</kbd>
       </button>
       <button
         type="button"
@@ -61,7 +69,7 @@ export function AdminTopBar({ isReadOnly = false, pendingBeta = 0, onOpenMenu, o
       <span
         title={prod ? "You are reading and writing LIVE data" : "Staging data: safe to test"}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide",
+          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-semibold",
           prod ? "border-red-200 bg-red-50 text-red-700" : "border-sky-200 bg-sky-50 text-sky-700"
         )}
       >

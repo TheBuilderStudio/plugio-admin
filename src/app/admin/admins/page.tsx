@@ -33,7 +33,6 @@ export default async function AdminsPage() {
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="Admin"
         title="Admins"
         description="Who can use this console." hint="Only super admins can change this list."
       />
@@ -49,7 +48,7 @@ export default async function AdminsPage() {
             <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Roles</h2>
             <dl className="mt-3 grid gap-3 sm:grid-cols-3">
               {Object.entries(ROLE_INFO).map(([key, r]) => (
-                <div key={key} className="rounded-xl border border-(--line) bg-[#F7F4EE] px-4 py-3">
+                <div key={key} className="rounded-xl border border-(--line) bg-(--hover) px-4 py-3">
                   <dt className="text-[13px] font-semibold text-(--ink)">{r.label}</dt>
                   <dd className="mt-1 text-[12.5px] leading-relaxed text-(--ink-soft)">{r.can}</dd>
                 </div>

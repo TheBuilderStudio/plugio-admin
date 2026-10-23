@@ -8,7 +8,7 @@ const TONE: Record<Tone, { box: string; dot: string }> = {
   warning: { box: "border-amber-200 bg-amber-50 text-amber-900", dot: "bg-amber-500" },
   danger: { box: "border-red-200 bg-red-50 text-red-800", dot: "bg-red-500" },
   info: { box: "border-sky-200 bg-sky-50 text-sky-800", dot: "bg-sky-500" },
-  neutral: { box: "border-(--line-strong) bg-[#F4F1EC] text-(--ink-soft)", dot: "bg-[#9A948B]" },
+  neutral: { box: "border-(--line) bg-(--hover) text-(--ink-soft)", dot: "bg-(--ink-mute)" },
 };
 
 /** One status pill for the whole console: tone carries meaning, the label carries the words. */
@@ -27,7 +27,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11.5px] font-semibold leading-5",
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-px text-[12px] font-medium leading-5",
         t.box,
         className
       )}

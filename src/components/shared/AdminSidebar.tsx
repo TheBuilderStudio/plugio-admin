@@ -103,7 +103,7 @@ export function AdminSidebar({
   return (
     <aside className="flex h-full w-(--sidebar-width) shrink-0 select-none flex-col border-r border-white/8 bg-sidebar-bg">
       <div className="flex h-14 shrink-0 items-center gap-2.5 px-4">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-500">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-brand-500">
           <span className="text-[14px] font-black leading-none text-white">P</span>
         </div>
         <div className="min-w-0">
@@ -135,7 +135,7 @@ export function AdminSidebar({
                   type="button"
                   onClick={() => toggle(group)}
                   aria-expanded={open}
-                  className="flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-left text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/45 outline-hidden transition hover:text-white/75 focus-visible:ring-2 focus-visible:ring-brand-500/60"
+                  className="flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-left text-[11px] font-medium text-white/40 outline-hidden transition hover:text-white/75 focus-visible:ring-2 focus-visible:ring-brand-500/60"
                 >
                   <span className="flex-1">{group}</span>
                   {!open && groupBadge > 0 && (
@@ -157,12 +157,12 @@ export function AdminSidebar({
                           onClick={onNavigate}
                           aria-current={active ? "page" : undefined}
                           className={cn(
-                            "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] font-medium outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-brand-500/60",
-                            active ? "bg-white/9 text-white" : "text-white/75 hover:bg-white/6 hover:text-white"
+                            "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] font-medium outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-brand-500/60",
+                            active ? "bg-white/10 text-white" : "text-white/70 hover:bg-white/6 hover:text-white"
                           )}
                         >
                           <Icon
-                            className={cn("h-[18px] w-[18px] shrink-0", active ? "text-brand-500" : "text-white/60")}
+                            className={cn("h-4 w-4 shrink-0", active ? "text-white" : "text-white/50")}
                             strokeWidth={active ? 2.25 : 1.9}
                           />
                           <span className="min-w-0 flex-1 truncate">{item.label}</span>

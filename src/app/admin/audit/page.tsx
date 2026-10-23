@@ -32,7 +32,6 @@ export default async function AuditLogsPage({ searchParams }: AuditPageProps) {
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="Audit & logs"
         title="Audit trail"
         description="Who did what in this panel." hint="Approvals, coupon and price changes, payouts, refunds and admin changes."
       />
@@ -82,7 +81,7 @@ export default async function AuditLogsPage({ searchParams }: AuditPageProps) {
                     <td className="whitespace-nowrap text-(--ink-soft)">{log.adminEmail}</td>
                     <td>
                       {log.targetEmail ? (
-                        <span className="rounded-md bg-[#F7F4EE] px-2 py-0.5 text-[12px]">{log.targetEmail}</span>
+                        <span className="rounded-md bg-(--hover) px-2 py-0.5 text-[12px]">{log.targetEmail}</span>
                       ) : (
                         <span className="text-(--ink-mute)">—</span>
                       )}

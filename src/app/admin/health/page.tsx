@@ -48,7 +48,6 @@ export default async function HealthPage() {
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="Platform"
         title="Platform health"
         description="What is broken for creators now." hint="Each row links to the creator, so you can reach out before they write to you."
       />
@@ -178,7 +177,7 @@ function FailureList({
     <ul className="divide-y divide-(--line)">
       {rows.map((r) => (
         <li key={r.key}>
-          <Link href={r.href} className="flex items-start justify-between gap-4 px-5 py-3 transition hover:bg-[#FAF7F2]">
+          <Link href={r.href} className="flex items-start justify-between gap-4 px-5 py-3 transition hover:bg-(--subtle)">
             <div className="min-w-0">
               <p className="truncate text-[13.5px] font-semibold text-(--ink)">{r.who}</p>
               <p className="truncate text-[12.5px] text-(--ink-soft)">{r.what}</p>

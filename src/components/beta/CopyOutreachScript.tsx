@@ -23,7 +23,7 @@ export function CopyOutreachScript({ script, couponCode }: Props) {
   return (
     <div className="space-y-3 rounded-xl border border-(--line) bg-(--paper) p-4">
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-500">
+        <p className="text-[12px] font-medium text-brand-500">
           Send this now
         </p>
         {couponCode ? (

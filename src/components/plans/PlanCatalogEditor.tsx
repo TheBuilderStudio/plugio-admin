@@ -194,7 +194,7 @@ export function PlanCatalogEditor({ catalog }: Props) {
             <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Paid plans</h2>
             <p className="text-[12.5px] text-(--ink-soft)">The “Save %” badge on the landing page comes from the longer terms.</p>
           </div>
-          <div role="group" aria-label="Currency" className="flex gap-1 rounded-xl bg-[#F4F1EC] p-1">
+          <div role="group" aria-label="Currency" className="flex gap-1 rounded-xl bg-(--hover) p-1">
             {([["USD", "International (USD)"], ["INR", "India (INR)"]] as const).map(([c, label]) => (
               <button
                 key={c}
@@ -330,7 +330,7 @@ function NumberField({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-[0.08em] text-(--ink-mute)">
+      <label className="mb-1.5 block text-[12px] font-medium text-(--ink-mute)">
         {label}
       </label>
       <input

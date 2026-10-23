@@ -200,6 +200,7 @@ export interface SellerStatement {
 export interface PayoutSettings {
   minPayoutMinor: number;
   withdrawAllFloorMinor: number;
+  holdDays: number;
   version: number;
   updatedBy: string | null;
   updatedAt: string | null;
@@ -496,7 +497,7 @@ export const storeApi = {
     call<{ result: "REFUNDED" | "IN_PROGRESS"; item: PaymentExceptionRow }>(
       actor, `/exceptions/${encodeURIComponent(id)}/refund-session`, { method: "POST" }),
   payoutSettings: (actor: string) => call<PayoutSettings>(actor, "/payout-settings"),
-  updatePayoutSettings: (actor: string, body: { minPayoutMinor: number; version: number }) =>
+  updatePayoutSettings: (actor: string, body: { minPayoutMinor: number; withdrawAllFloorMinor: number; holdDays: number; version: number }) =>
     call<PayoutSettings>(actor, "/payout-settings", { method: "PUT", body }),
   /** After the gateway ruled a dispute lost: creator debited, platform fee returned, downloads blocked or session cancelled. */
   confirmDisputeLoss: (actor: string, id: string) =>

@@ -95,19 +95,23 @@ export async function updateCommissionPolicyAction(digital: string, bookings: st
   }
 }
 
-/** Saves the minimum payout (whole rupees). The server validates the range, checks the version and audits it. */
-export async function updatePayoutSettingsAction(minRupees: string, version: number): Promise<ActionResult> {
+/** Saves the minimum payout and the withdraw-all floor (whole rupees). The server validates the range, checks the version and audits it. */
+export async function updatePayoutSettingsAction(minRupees: string, floorRupees: string, holdDays: string, version: number): Promise<ActionResult> {
   try {
     const session = await requireWritableAdmin();
     const adminEmail = session.user?.email;
     if (!adminEmail) return { success: false, message: "No admin email on session." };
     const text = minRupees.trim();
     if (!/^\d{1,6}$/.test(text)) return { success: false, message: "Enter a whole number of rupees." };
+    const floorText = floorRupees.trim();
+    if (!/^\d{1,6}$/.test(floorText)) return { success: false, message: "Enter a whole number of rupees for the withdraw-all floor." };
+    const holdText = holdDays.trim();
+    if (!/^\d{1,2}$/.test(holdText)) return { success: false, message: "Enter the hold period as whole days (0 to 90)." };
     if (!Number.isInteger(version) || version < 0) return { success: false, message: "Reload the page and try again." };
-    const saved = await storeApi.updatePayoutSettings(adminEmail, { minPayoutMinor: Number(text) * 100, version });
-    logAdminAction({ action: "STORE_PAYOUT_SETTINGS_UPDATE", adminEmail, details: `min=${saved.minPayoutMinor / 100} v${saved.version}` });
+    const saved = await storeApi.updatePayoutSettings(adminEmail, { minPayoutMinor: Number(text) * 100, withdrawAllFloorMinor: Number(floorText) * 100, holdDays: Number(holdText), version });
+    logAdminAction({ action: "STORE_PAYOUT_SETTINGS_UPDATE", adminEmail, details: `min=${saved.minPayoutMinor / 100} floor=${saved.withdrawAllFloorMinor / 100} hold=${saved.holdDays} v${saved.version}` });
     revalidatePath("/admin/store");
-    return { success: true, message: "Minimum payout saved. It applies to new requests now." };
+    return { success: true, message: "Payout rules saved. They apply to new requests now." };
   } catch (error) {
     return fail(error, "Could not save the payout rules.");
   }

@@ -31,7 +31,6 @@ export default async function InquiriesPage({ searchParams }: Props) {
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="People"
         title="Brand inquiries"
         description="Messages brands sent to creators." hint="Unread ones are creators missing deals. Useful for spotting spam and for nudging creators."
       />
@@ -64,7 +63,7 @@ export default async function InquiriesPage({ searchParams }: Props) {
         ) : (
           <ul className="divide-y divide-(--line)">
             {result.items.map((i) => (
-              <li key={i.id} className="flex gap-3 px-5 py-3.5 transition-colors hover:bg-[#FAF7F2]">
+              <li key={i.id} className="flex gap-3 px-5 py-3.5 transition-colors hover:bg-(--subtle)">
                 <div className="relative mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-500/10 text-[12px] font-bold text-brand-500" aria-hidden>
                   {getInitials(i.sender_name)}
                   {!i.read && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500" />}

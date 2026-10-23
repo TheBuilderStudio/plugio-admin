@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Store } from "lucide-react";
+import { Store } from "lucide-react";
 import { requireCapability } from "@/lib/admin-access";
 import { storeApi } from "@/lib/store-api";
 import { validatePage } from "@/lib/validation";
@@ -62,11 +62,8 @@ export default async function SellerStatementPage({
 
   return (
     <AdminPage>
-      <Link href="/admin/store?tab=payouts" className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-(--ink-soft) hover:underline">
-        <ArrowLeft className="size-3.5" /> Back to store operations
-      </Link>
       <AdminPageHeader
-        kicker="Creator statement"
+        entity
         title={statement.sellerName ?? "Seller"}
         description={`${statement.sellerEmail ?? ""} · every sale, fee, withdrawal and correction with the balance after each`}
       />

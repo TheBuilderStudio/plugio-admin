@@ -47,8 +47,7 @@ export default async function ReviewsAdminPage({ searchParams }: ReviewsPageProp
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="Marketplace"
-        title="Review moderation"
+        title="Reviews"
         description="Reported reviews waiting for you." hint="Creators cannot hide reviews. They report one, and you keep it or remove it with a reason the creator sees. Reviews hidden before this rule wait here too."
       />
       <AdminCard padded={false}>

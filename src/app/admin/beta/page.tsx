@@ -42,7 +42,7 @@ export default async function BetaPage({ searchParams }: BetaPageProps) {
 
   return (
     <AdminPage>
-      <AdminPageHeader kicker="People" title="Access requests" description="People who asked for access." hint="Approving gives access only. It does not grant a paid plan." />
+      <AdminPageHeader title="Access requests" description="People who asked for access." hint="Approving gives access only. It does not grant a paid plan." />
       <Suspense fallback={null}>
         <SavedViews pageKey="access-requests" />
       </Suspense>

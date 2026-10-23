@@ -76,7 +76,7 @@ export function CommissionPolicyForm({
       </div>
 
       {example && (
-        <p className="rounded-lg bg-[#F7F4EE] px-3 py-2 text-[12px] text-(--ink-soft)" data-testid="policy-example">
+        <p className="rounded-lg bg-(--hover) px-3 py-2 text-[12px] text-(--ink-soft)" data-testid="policy-example">
           On a Rs 1,000 digital product: gateway <strong>Rs {example.gateway}</strong>, Plugio <strong>Rs {example.plugio}</strong>,
           creator receives <strong>Rs {example.creator}</strong>.
         </p>
@@ -86,7 +86,7 @@ export function CommissionPolicyForm({
         <button
           type="submit"
           disabled={pending || !dirty}
-          className="rounded-lg border border-(--line) px-3 py-1.5 text-[13px] font-semibold text-(--ink) hover:bg-[#F7F4EE] disabled:opacity-40"
+          className="rounded-lg border border-(--line) px-3 py-1.5 text-[13px] font-semibold text-(--ink) hover:bg-(--hover) disabled:opacity-40"
         >
           {pending ? "Saving…" : "Save policy"}
         </button>
