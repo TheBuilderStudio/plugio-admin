@@ -1,9 +1,16 @@
 import Link from "next/link";
 import { Youtube, Instagram, Facebook } from "lucide-react";
-import { formatRelativeTime, cn, getInitials } from "@/lib/utils";
+import { formatRelativeTime, cn, getInitials, formatMinor } from "@/lib/utils";
 import { formatInr, formatUsd } from "@/constants";
+import type { MarketplacePulse, MoneyByCurrency } from "@/lib/db/marketplace";
 import type { AdminOverviewPayload, BetaRequestRow, BusinessOverview } from "@/types";
 import { AdminPage, AdminCard } from "@/components/ui/page-shell";
+import { FunnelPanel, RevenuePanel, RetentionPanel } from "@/components/dashboard/growth-panels";
+import type { FunnelStep, RevenueSeries, Retention } from "@/lib/db/growth";
+import { TrendChart } from "@/components/ui/trend-chart";
+import type { getTrendSeries } from "@/lib/db/health";
+
+export type ActionItem = { label: string; count: number; href: string; tone: "urgent" | "money" | "people" };
 
 type OverviewViewProps = {
   firstName: string;
@@ -17,6 +24,12 @@ type OverviewViewProps = {
   }[];
   pendingQueue: BetaRequestRow[];
   loadError: string | null;
+  storeItems: ActionItem[];
+  trends: Awaited<ReturnType<typeof getTrendSeries>> | null;
+  pulse: MarketplacePulse | null;
+  funnel: FunnelStep[] | null;
+  revenueSeries: RevenueSeries[] | null;
+  retention: Retention | null;
 };
 
 export function OverviewView({
@@ -26,6 +39,12 @@ export function OverviewView({
   auditLogs,
   pendingQueue,
   loadError,
+  storeItems,
+  trends,
+  pulse,
+  funnel,
+  revenueSeries,
+  retention,
 }: OverviewViewProps) {
   const { access, revenue, plans, coupons, social, content, activation, attention } = overview;
   const paidLive = plans.active_creator + plans.active_pro;
@@ -62,15 +81,68 @@ export function OverviewView({
         </div>
       ) : null}
 
-      {!queueBusy ? (
-        <div className="flex items-center justify-between gap-3 rounded-[14px] border border-(--line) bg-(--paper) px-4 py-2.5 shadow-(--shadow-paper)">
-          <p className="text-[13px] text-(--ink-soft)">
-            Queue is clear{firstName ? `, ${firstName}` : ""}. Nobody is waiting for access.
-          </p>
-          <Link href="/admin/beta?status=PENDING" className="text-[12.5px] font-semibold text-brand-500">
-            Open queue
-          </Link>
+      <ActionCenter
+        firstName={firstName}
+        items={[
+          ...storeItems,
+          ...(attention.pending_beta > 0
+            ? [{ label: "People waiting for access", count: attention.pending_beta, href: "/admin/beta?status=PENDING", tone: "people" as const }]
+            : []),
+          ...(attention.payment_failures_7d > 0
+            ? [{ label: "Payment failures this week", count: attention.payment_failures_7d, href: "/admin/health", tone: "urgent" as const }]
+            : []),
+          ...(attention.content_failed > 0
+            ? [{ label: "Posts that failed to publish", count: attention.content_failed, href: "/admin/health", tone: "urgent" as const }]
+            : []),
+          ...(attention.sync_failed > 0
+            ? [{ label: "Social accounts failing to sync", count: attention.sync_failed, href: "/admin/health", tone: "urgent" as const }]
+            : []),
+        ].sort((a, b) => ORDER[a.tone] - ORDER[b.tone])}
+      />
+
+      {trends ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <TrendChart label="New sign-ups" points={trends.signups} />
+          <TrendChart label="Access applications" points={trends.applications} accent="#c2410c" />
+          <TrendChart label="Posts published" points={trends.publishes} accent="#0f7a4a" />
+          <TrendChart label="Successful subscription payments" points={trends.paid} accent="#14110e" />
         </div>
+      ) : null}
+
+      {funnel || revenueSeries ? (
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+          {revenueSeries ? <RevenuePanel series={revenueSeries} /> : null}
+          {funnel ? <FunnelPanel steps={funnel} /> : null}
+        </div>
+      ) : null}
+      {retention ? <RetentionPanel r={retention} /> : null}
+
+      {pulse ? (
+        <AdminCard padded={false}>
+          <div className="flex items-center justify-between gap-3 border-b border-(--line) px-5 py-3">
+            <div>
+              <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Marketplace</h2>
+              <p className="text-[12.5px] text-(--ink-soft)">Store sales and paid sessions, last 30 days. Platform fee is what Plugio keeps.</p>
+            </div>
+            <Link href="/admin/transactions" className="text-[12.5px] font-semibold text-brand-500">Transactions</Link>
+          </div>
+          <div className="grid gap-px bg-(--line) sm:grid-cols-2 lg:grid-cols-4">
+            <PulseCell label="Store sales" rows={pulse.store} href="/admin/store?tab=orders" />
+            <PulseCell label="Paid sessions" rows={pulse.sessions} href="/admin/bookings?filter=ALL" />
+            <div className="bg-(--paper) px-5 py-4">
+              <p className="text-[11px] font-medium text-(--ink-mute)">Creators earning</p>
+              <p className="mt-1 text-[22px] font-semibold tabular-nums tracking-tight text-(--ink)">{pulse.activeSellers30d}</p>
+              <p className="mt-0.5 text-[12px] text-(--ink-soft)">sold or got paid in 30 days</p>
+            </div>
+            <Link href="/admin/bookings" className="bg-(--paper) px-5 py-4">
+              <p className="text-[11px] font-medium text-(--ink-mute)">Upcoming sessions</p>
+              <p className="mt-1 text-[22px] font-semibold tabular-nums tracking-tight text-(--ink)">{pulse.upcomingSessions}</p>
+              <p className={cn("mt-0.5 text-[12px]", pulse.refundPending > 0 ? "font-semibold text-red-700" : "text-(--ink-soft)")}>
+                {pulse.refundPending > 0 ? `${pulse.refundPending} refund${pulse.refundPending === 1 ? "" : "s"} stuck` : "No stuck refunds"}
+              </p>
+            </Link>
+          </div>
+        </AdminCard>
       ) : null}
 
       <div className={cn("grid grid-cols-1 gap-4", queueBusy && "xl:grid-cols-12")}>
@@ -78,7 +150,7 @@ export function OverviewView({
           <AdminCard padded={false} className="xl:col-span-7">
             <div className="flex items-center justify-between gap-3 border-b border-(--line) px-5 py-3">
               <div>
-                <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Queue</h2>
+                <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Access requests</h2>
                 <p className="text-[12.5px] text-(--ink-soft)">
                   {attention.pending_beta} waiting — approve is access, not a plan
                 </p>
@@ -117,7 +189,7 @@ export function OverviewView({
         <AdminCard padded={false} className={queueBusy ? "xl:col-span-5" : undefined}>
           <div className="flex items-center justify-between gap-3 border-b border-(--line) px-5 py-3">
             <div>
-              <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Money</h2>
+              <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Subscription revenue</h2>
               <p className="text-[12.5px] text-(--ink-soft)">Prepaid · last 30 days</p>
             </div>
             <div className="flex gap-3">
@@ -260,7 +332,7 @@ export function OverviewView({
 
         <AdminCard padded={false} className="flex w-full flex-col self-start lg:col-span-5">
           <div className="flex shrink-0 items-center justify-between gap-3 border-b border-(--line) px-5 py-3.5">
-            <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Live</h2>
+            <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Recent activity</h2>
             <Link href="/admin/audit" className="text-[12.5px] font-semibold text-brand-500">
               Audit
             </Link>
@@ -283,6 +355,65 @@ export function OverviewView({
         </AdminCard>
       </div>
     </AdminPage>
+  );
+}
+
+function PulseCell({ label, rows, href }: { label: string; rows: MoneyByCurrency[]; href: string }) {
+  return (
+    <Link href={href} className="bg-(--paper) px-5 py-4">
+      <p className="text-[11px] font-medium text-(--ink-mute)">{label}</p>
+      {rows.length === 0 ? (
+        <p className="mt-1 text-[22px] font-semibold tracking-tight text-(--ink-mute)">None yet</p>
+      ) : (
+        rows.map((r) => (
+          <div key={r.currency} className="mt-1">
+            <p className="text-[22px] font-semibold tabular-nums tracking-tight text-(--ink)">{formatMinor(r.grossMinor, r.currency)}</p>
+            <p className="text-[12px] text-(--ink-soft)">
+              {r.count} sale{r.count === 1 ? "" : "s"} · Plugio keeps {formatMinor(r.feeMinor, r.currency)}
+            </p>
+          </div>
+        ))
+      )}
+    </Link>
+  );
+}
+
+const ORDER = { urgent: 0, money: 1, people: 2 } as const;
+
+function ActionCenter({ firstName, items }: { firstName: string; items: ActionItem[] }) {
+  if (items.length === 0) {
+    return (
+      <div className="flex items-center gap-3 rounded-[14px] border border-emerald-200 bg-emerald-50/70 px-4 py-3">
+        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+        <p className="text-[13.5px] font-medium text-emerald-900">
+          Nothing needs you right now{firstName ? `, ${firstName}` : ""}. No waiting requests, payouts, disputes or failures.
+        </p>
+      </div>
+    );
+  }
+  const tone = {
+    urgent: "bg-red-500",
+    money: "bg-amber-500",
+    people: "bg-brand-500",
+  } as const;
+  return (
+    <AdminCard padded={false}>
+      <div className="border-b border-(--line) px-5 py-3">
+        <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Needs you</h2>
+        <p className="text-[12.5px] text-(--ink-soft)">Most urgent first. Each row opens the place to deal with it.</p>
+      </div>
+      <ul className="grid divide-y divide-(--line) sm:grid-cols-2 sm:divide-y-0">
+        {items.map((item) => (
+          <li key={item.label} className="sm:border-b sm:border-(--line)">
+            <Link href={item.href} className="flex items-center gap-3 px-5 py-3 transition hover:bg-[#FAF7F2]">
+              <span className={cn("h-2 w-2 shrink-0 rounded-full", tone[item.tone])} />
+              <span className="min-w-0 flex-1 truncate text-[13.5px] text-(--ink)">{item.label}</span>
+              <span className="text-[15px] font-semibold tabular-nums text-(--ink)">{item.count}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </AdminCard>
   );
 }
 

@@ -230,6 +230,10 @@ export interface AdminUserRow {
   access_status: BetaStatusValue | null;
   beta_approved: boolean | null;
   subscription_status: SubscriptionStatusValue | null;
+  /** Active connected social accounts */
+  channels?: number;
+  /** Posts published through Plugio */
+  published?: number;
 }
 
 /** Full user detail for the detail page */
@@ -312,6 +316,16 @@ export interface AdminAuditLog {
     | "BILLING_REVOKE"
     | "STORE_PAYOUT_PAID"
     | "STORE_PAYOUT_REJECT"
+    | "STORE_SETTLEMENT_CREATE"
+    | "STORE_SETTLEMENT_SETTLE"
+    | "STORE_SETTLEMENT_CANCEL"
+    | "STORE_SETTLEMENT_EXPORT"
+    | "REPORT_EXPORT"
+    | "ADMIN_GRANT"
+    | "ADMIN_DEACTIVATE"
+    | "ADMIN_ACTIVATE"
+    | "STORE_KYC_APPROVE"
+    | "STORE_KYC_REJECT"
     | "STORE_PRODUCT_SUSPEND"
     | "STORE_PRODUCT_UNSUSPEND"
     | "STORE_COMMISSION_UPDATE"
@@ -321,6 +335,8 @@ export interface AdminAuditLog {
     | "REVIEW_KEEP"
     | "STORE_DISPUTE_LOSS"
     | "STORE_PAYOUT_SETTINGS_UPDATE"
+    | "CREATOR_NOTE_ADD"
+    | "CREATOR_NOTE_DELETE"
     // Legacy — kept for reading old audit logs; do not emit new entries
     | "BILLING_GRANT"
     | "BILLING_GRANT_EXTEND"

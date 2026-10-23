@@ -29,3 +29,18 @@ export async function logoutAction(): Promise<void> {
 
   await signOut({ redirectTo: "/login" });
 }
+
+export interface UserSearchHit {
+  id: string;
+  name: string | null;
+  email: string;
+}
+
+/** Quick lookup for the command palette: name, email or user id. Read-only. */
+export async function searchUsersAction(query: string): Promise<UserSearchHit[]> {
+  await requireAdmin();
+  const q = query.trim().slice(0, 100);
+  if (q.length < 2) return [];
+  const { searchUsersQuick } = await import("@/lib/db/queries");
+  return searchUsersQuick(q);
+}

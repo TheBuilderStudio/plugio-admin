@@ -1,7 +1,8 @@
 import "server-only";
 
 import { getActiveDbContext } from "@/lib/db";
-import { signAdminToken } from "@/lib/admin-token";
+import { AdminAuthConfigError, adminAuthHeaders } from "@/lib/admin-token";
+import { resolveBackendUrl } from "@/lib/backend-url";
 
 /**
  * Server-to-server client for the Plugio backend's admin store API.
@@ -32,6 +33,60 @@ export interface StorePayout {
   processedAt: string | null;
   /** The seller's withdrawable balance right now; negative means they owe money after refunds or disputes. */
   sellerAvailableMinor: number;
+}
+
+export interface StoreKyc {
+  sellerId: string;
+  sellerName: string | null;
+  sellerEmail: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  legalName: string;
+  pan: string;
+  payoutHolder: string | null;
+  payoutDestination: string | null;
+  /** True when the PAN name and the payout account holder are the same ignoring case and punctuation. */
+  nameMatchesPayout: boolean;
+  /** Another creator with a pending or approved verification uses the same PAN. */
+  duplicatePan: boolean;
+  rejectReason: string | null;
+  reviewedBy: string | null;
+  submittedAt: string;
+  reviewedAt: string | null;
+}
+
+export interface StoreSettlementBatch {
+  id: string;
+  status: "OPEN" | "SETTLED" | "CANCELLED";
+  payoutCount: number;
+  totalMinor: number;
+  currency: string;
+  bankReference: string | null;
+  createdBy: string;
+  createdAt: string;
+  closedBy: string | null;
+  closedAt: string | null;
+  /** Set once the bank file was downloaded; the bank may have paid it from then on. */
+  exportedAt: string | null;
+  cancelReason: string | null;
+}
+
+export interface StoreDiscrepancy {
+  kind: string;
+  subjectId: string;
+  sellerId: string | null;
+  expectedMinor: number | null;
+  actualMinor: number | null;
+  detail: string;
+}
+
+export interface StoreReconciliation {
+  generatedAt: string;
+  ledgerTotalMinor: number;
+  owedToCreatorsMinor: number;
+  requestedPayoutsMinor: number;
+  paidPayoutsMinor: number;
+  balanced: boolean;
+  discrepancies: StoreDiscrepancy[];
 }
 
 export interface StoreOrder {
@@ -148,44 +203,94 @@ export interface CommissionPolicy {
   updatedAt: string | null;
 }
 
+export interface AdminTransaction {
+  kind: "STORE" | "BOOKING" | "SUBSCRIPTION";
+  id: string;
+  at: string | null;
+  partyId: string | null;
+  partyName: string | null;
+  partyEmail: string | null;
+  counterpartyEmail: string | null;
+  description: string | null;
+  status: string;
+  currency: string;
+  grossMinor: number;
+  feeMinor: number;
+  netMinor: number;
+  gatewayPaymentId: string | null;
+}
+
+export interface RevenueRow {
+  kind: string;
+  currency: string;
+  status: string;
+  count: number;
+  grossMinor: number;
+  feeMinor: number;
+  netMinor: number;
+}
+
+export interface CommissionRow {
+  sellerId: string;
+  sellerName: string | null;
+  sellerEmail: string | null;
+  kind: string;
+  currency: string;
+  count: number;
+  grossMinor: number;
+  feeMinor: number;
+  netMinor: number;
+}
+
+export interface PayoutSummaryRow {
+  status: string;
+  currency: string;
+  count: number;
+  totalMinor: number;
+}
+
+export interface ReportRange {
+  from: string;
+  to: string;
+}
+
+export interface TransactionFilter {
+  kind?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+  q?: string;
+}
+
+function query(params: Record<string, string | number | undefined>): string {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== "") sp.set(k, String(v));
+  }
+  const qs = sp.toString();
+  return qs ? `?${qs}` : "";
+}
+
 export class StoreApiError extends Error {}
 
-async function resolveBackendConfig(): Promise<{ backend: string; apiKey: string }> {
+async function resolveBackendConfig(): Promise<{ backend: string; apiKey?: string }> {
   const isStaging = (await getActiveDbContext()) === "staging";
-  const isDev = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_ENVIRONMENT === "development";
-
-  let backend: string | undefined;
-  let apiKey: string | undefined;
-
-  if (isStaging) {
-    // When staging is active:
-    // If explicitly configured, use STAGING_BACKEND_API_URL.
-    // In local dev, use BACKEND_API_URL or localhost.
-    // In deployed admin panel, automatically default to https://staging-api.plugio.app.
-    backend =
-      process.env.STAGING_BACKEND_API_URL ||
-      (isDev ? process.env.BACKEND_API_URL || "http://localhost:8080" : "https://staging-api.plugio.app");
-
-    apiKey = process.env.STAGING_ADMIN_API_KEY || process.env.ADMIN_API_KEY;
-
-    if (!apiKey) {
-      throw new StoreApiError(
-        "ADMIN_API_KEY is not configured. Please set ADMIN_API_KEY or STAGING_ADMIN_API_KEY in .env.local."
-      );
-    }
-  } else {
-    backend = process.env.BACKEND_API_URL || (isDev ? "http://localhost:8080" : undefined);
-    apiKey = process.env.ADMIN_API_KEY;
-
-    if (!backend) {
-      throw new StoreApiError("BACKEND_API_URL is not configured.");
-    }
-    if (!apiKey) {
-      throw new StoreApiError("ADMIN_API_KEY is not configured.");
-    }
+  const backend = resolveBackendUrl(isStaging);
+  if (!backend) {
+    throw new StoreApiError("BACKEND_API_URL is not configured.");
   }
+  // The shared key is only needed in legacy mode; adminAuthHeaders refuses to run with neither key nor signing key.
+  const apiKey = isStaging ? process.env.STAGING_ADMIN_API_KEY || process.env.ADMIN_API_KEY : process.env.ADMIN_API_KEY;
+  return { backend, apiKey };
+}
 
-  return { backend: backend.replace(/\/+$/, ""), apiKey };
+function authHeaders(actor: string, method: string, path: string, apiKey?: string): Record<string, string> {
+  try {
+    return adminAuthHeaders({ actor, method, path, apiKey });
+  } catch (err) {
+    if (err instanceof AdminAuthConfigError) throw new StoreApiError(err.message);
+    throw err;
+  }
 }
 
 async function call<T>(
@@ -199,16 +304,14 @@ async function call<T>(
   const method = init?.method ?? "GET";
   const urlPath = `${base}${path}`;
   // Signed identity (when a signing key is configured); the backend binds it to this method and path.
-  const token = signAdminToken({ email: actor, method, path: urlPath.split("?")[0] });
+  const auth = authHeaders(actor, method, urlPath.split("?")[0], apiKey);
 
   let res: Response;
   try {
     res = await fetch(`${backend}${urlPath}`, {
       method,
       headers: {
-        "X-Admin-Api-Key": apiKey,
-        "X-Admin-Actor": actor,
-        ...(token ? { "X-Admin-Token": token } : {}),
+        ...auth,
         Accept: "application/json",
         ...(init?.body !== undefined ? { "Content-Type": "application/json" } : {}),
       },
@@ -232,11 +335,24 @@ async function call<T>(
       throw new StoreApiError(json?.message || "Invalid or unauthorized admin API key");
     }
     if (res.status === 403) {
-      throw new StoreApiError("Access denied. You do not have permission to access Store operations.");
+      throw new StoreApiError("Access denied. You do not have permission for this action.");
     }
     throw new StoreApiError(json?.message || `Backend request failed (${res.status})`);
   }
   return json?.data as T;
+}
+
+async function fetchCsv(actor: string, urlPathWithQuery: string, what: string): Promise<string> {
+  const { backend, apiKey } = await resolveBackendConfig();
+  const urlPath = urlPathWithQuery.split("?")[0];
+  const auth = authHeaders(actor, "GET", urlPath, apiKey);
+  const res = await fetch(`${backend}${urlPathWithQuery}`, {
+    headers: { ...auth, Accept: "text/csv" },
+    cache: "no-store",
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!res.ok) throw new StoreApiError(res.status === 403 ? `You do not have permission to export ${what}.` : `Export failed (${res.status})`);
+  return res.text();
 }
 
 export const storeApi = {
@@ -249,6 +365,34 @@ export const storeApi = {
     call<StorePayout>(actor, `/payouts/${encodeURIComponent(id)}/paid`, { method: "POST", body: { reference } }),
   rejectPayout: (actor: string, id: string, reason: string) =>
     call<StorePayout>(actor, `/payouts/${encodeURIComponent(id)}/reject`, { method: "POST", body: { reason } }),
+  kyc: (actor: string, status: string, page: number) =>
+    call<StorePage<StoreKyc>>(actor, `/kyc?status=${encodeURIComponent(status)}&page=${page}`),
+  approveKyc: (actor: string, sellerId: string) =>
+    call<StoreKyc>(actor, `/kyc/${encodeURIComponent(sellerId)}/approve`, { method: "POST", body: {} }),
+  rejectKyc: (actor: string, sellerId: string, reason: string) =>
+    call<StoreKyc>(actor, `/kyc/${encodeURIComponent(sellerId)}/reject`, { method: "POST", body: { reason } }),
+  settlements: (actor: string, page: number) => call<StorePage<StoreSettlementBatch>>(actor, `/settlements?page=${page}`),
+  createSettlement: (actor: string) => call<StoreSettlementBatch>(actor, "/settlements", { method: "POST", body: {} }),
+  settleBatch: (actor: string, id: string, reference: string) =>
+    call<StoreSettlementBatch>(actor, `/settlements/${encodeURIComponent(id)}/settle`, { method: "POST", body: { reference } }),
+  cancelBatch: (actor: string, id: string, reason: string) =>
+    call<StoreSettlementBatch>(actor, `/settlements/${encodeURIComponent(id)}/cancel`, { method: "POST", body: { reason } }),
+  reconciliation: (actor: string) => call<StoreReconciliation>(actor, "/reconciliation"),
+  /** The bank file for a batch, as CSV text. */
+  settlementCsv: (actor: string, id: string): Promise<string> =>
+    fetchCsv(actor, `/api/admin/store/settlements/${encodeURIComponent(id)}/csv`, "settlements"),
+  transactions: (actor: string, filter: TransactionFilter, page: number) =>
+    call<StorePage<AdminTransaction>>(actor, `/transactions${query({ ...filter, page, size: 50 })}`),
+  revenueReport: (actor: string, range: { from?: string; to?: string }) =>
+    call<{ from: string; to: string; rows: RevenueRow[] }>(actor, `/reports/revenue${query(range)}`),
+  commissionReport: (actor: string, range: { from?: string; to?: string }) =>
+    call<{ from: string; to: string; rows: CommissionRow[] }>(actor, `/reports/commission${query(range)}`),
+  payoutReport: (actor: string, range: { from?: string; to?: string }) =>
+    call<{ from: string; to: string; rows: PayoutSummaryRow[] }>(actor, `/reports/payouts${query(range)}`),
+  /** CSV text for one of: transactions, revenue, commission, payouts. */
+  reportCsv: (actor: string, name: "transactions" | "revenue" | "commission" | "payouts", params: TransactionFilter): Promise<string> =>
+    fetchCsv(actor, name === "transactions" ? `/api/admin/store/transactions/csv${query({ ...params })}`
+      : `/api/admin/store/reports/${name}/csv${query({ from: params.from, to: params.to })}`, name),
   exceptions: (actor: string, activeOnly: boolean, page: number) =>
     call<StorePage<PaymentExceptionRow>>(actor, `/exceptions?activeOnly=${activeOnly}&page=${page}`),
   dismissException: (actor: string, id: string, reason: string) =>
@@ -304,4 +448,29 @@ export const reviewApi = {
     call<null>(actor, `/${encodeURIComponent(id)}/hide`, { method: "POST", body: { reason } }, "/api/admin/reviews"),
   keep: (actor: string, id: string, note: string) =>
     call<null>(actor, `/${encodeURIComponent(id)}/keep`, { method: "POST", body: { note: note || undefined } }, "/api/admin/reviews"),
+};
+
+export type AdminRole = "SUPPORT" | "FINANCE" | "SUPER_ADMIN";
+
+export interface BackendAdmin {
+  email: string;
+  role: AdminRole;
+  active: boolean;
+  createdBy: string | null;
+  createdAt: string | null;
+  lastSeenAt: string | null;
+}
+
+/** Who may use the admin API, and with which role. Super admin only; the backend enforces every rule. */
+export const adminUsersApi = {
+  list: (actor: string) => call<BackendAdmin[]>(actor, "", undefined, "/api/admin/users"),
+  /** The caller's own role as the backend sees it. */
+  me: (actor: string) => call<{ email: string; role: AdminRole; method: string }>(actor, "/me", undefined, "/api/admin/users"),
+  /** Adds an admin, or changes the role of an existing one. */
+  grant: (actor: string, email: string, role: AdminRole) =>
+    call<BackendAdmin>(actor, "", { method: "POST", body: { email, role } }, "/api/admin/users"),
+  deactivate: (actor: string, email: string) =>
+    call<BackendAdmin>(actor, `/${encodeURIComponent(email)}/deactivate`, { method: "POST" }, "/api/admin/users"),
+  activate: (actor: string, email: string) =>
+    call<BackendAdmin>(actor, `/${encodeURIComponent(email)}/activate`, { method: "POST" }, "/api/admin/users"),
 };

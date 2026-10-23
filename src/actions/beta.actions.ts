@@ -15,6 +15,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireWritableAdmin, getAdminEmail } from "@/lib/security";
+import { assertCapability } from "@/lib/admin-access";
 import { validateUserId } from "@/lib/validation";
 import {
   approveBetaUser,
@@ -47,6 +48,7 @@ export async function approveBetaAction(
   try {
     // 1. Validate admin session + writable mode
     const session = await requireWritableAdmin();
+    await assertCapability(session, "REVIEW_BETA");
 
     // 2. Validate input
     const validUserId = validateUserId(userId);
@@ -121,6 +123,7 @@ export async function rejectBetaAction(userId: string): Promise<ActionResult> {
   try {
     // 1. Validate admin session + writable mode
     const session = await requireWritableAdmin();
+    await assertCapability(session, "REVIEW_BETA");
 
     // 2. Validate input
     const validUserId = validateUserId(userId);

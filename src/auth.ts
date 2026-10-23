@@ -4,8 +4,9 @@
  * Authentication flow:
  * 1. Admin clicks "Sign in with Google"
  * 2. Google OAuth2 redirects back with user profile
- * 3. signIn callback checks email against ADMIN_EMAILS whitelist
- * 4. If not whitelisted → deny access (redirect to error)
+ * 3. signIn callback checks email against the ADMIN_EMAILS list, then against the backend's admin list
+ *    (admins added on the Admins page; counted only when the backend confirms with a signed token)
+ * 4. If neither → deny access (redirect to error)
  * 5. If whitelisted → session created with HttpOnly cookie
  *
  * Security:
@@ -17,6 +18,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { ADMIN_EMAILS } from "@/constants";
+import { isActiveBackendAdmin } from "@/lib/admin-directory";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
@@ -44,7 +46,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       const normalizedEmail = user.email.trim().toLowerCase();
-      const isAdmin = ADMIN_EMAILS.includes(normalizedEmail);
+      const isAdmin = ADMIN_EMAILS.includes(normalizedEmail) || (await isActiveBackendAdmin(normalizedEmail));
 
       if (isAdmin) {
         // We log business actions (approve/reject) in server actions.
@@ -65,12 +67,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token?.email) {
         session.user.email = token.email as string;
       }
+      // Set at sign-in for admins who are not in ADMIN_EMAILS; see requireAdmin() for how it is re-checked.
+      session.user.backendAdmin = token.backendAdmin === true;
       return session;
     },
 
     async jwt({ token, user }) {
       if (user?.email) {
         token.email = user.email;
+        // Only at sign-in (the callback receives `user` once): remember that this admin came from the backend list.
+        token.backendAdmin = !ADMIN_EMAILS.includes(user.email.trim().toLowerCase());
       }
       return token;
     },

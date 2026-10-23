@@ -4,7 +4,7 @@ import {
   getBillingPlanSettings,
 } from "@/lib/db/queries";
 import { PlanCatalogEditor } from "@/components/plans/PlanCatalogEditor";
-import { AdminPage } from "@/components/ui/page-shell";
+import { AdminPage, AdminPageHeader } from "@/components/ui/page-shell";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -33,6 +33,8 @@ export default async function PlansPage() {
 
   return (
     <AdminPage>
+      <AdminPageHeader kicker="Money" title="Plans" description="Prices and channel limits that checkout and the landing page read." />
+
       <div className="mb-5 max-w-2xl">
         <p className="text-[13px] leading-relaxed text-(--ink-soft)">
           This is the commercial catalog. Checkout, landing prices, save percentages, and channel

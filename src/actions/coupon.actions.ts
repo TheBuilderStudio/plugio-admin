@@ -6,6 +6,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireWritableAdmin, getAdminEmail } from "@/lib/security";
+import { assertCapability } from "@/lib/admin-access";
 import { validateCouponCode, ValidationError } from "@/lib/validation";
 import {
   createPlanCoupon,
@@ -74,6 +75,7 @@ export async function createCouponAction(input: {
 }): Promise<ActionResult> {
   try {
     const session = await requireWritableAdmin();
+    await assertCapability(session, "MANAGE_COUPONS");
     const code = validateCouponCode(input.code);
 
     let maxRedemptions: number | null = null;
@@ -149,6 +151,7 @@ export async function updateCouponAction(input: {
 }): Promise<ActionResult> {
   try {
     const session = await requireWritableAdmin();
+    await assertCapability(session, "MANAGE_COUPONS");
 
     if (typeof input.id !== "string" || !input.id.trim()) {
       return {
@@ -280,6 +283,7 @@ export async function createPlanCouponAction(input: {
 }): Promise<ActionResult> {
   try {
     const session = await requireWritableAdmin();
+    await assertCapability(session, "MANAGE_COUPONS");
     const code = validateCouponCode(input.code);
     if (input.plan !== "CREATOR" && input.plan !== "PRO") {
       return {
@@ -347,6 +351,7 @@ export async function updatePlanCouponAction(input: {
 }): Promise<ActionResult> {
   try {
     const session = await requireWritableAdmin();
+    await assertCapability(session, "MANAGE_COUPONS");
     if (typeof input.id !== "string" || !input.id.trim()) {
       return {
         success: false,
@@ -446,6 +451,7 @@ export async function setPlanCouponActiveAction(
 ): Promise<ActionResult> {
   try {
     const session = await requireWritableAdmin();
+    await assertCapability(session, "MANAGE_COUPONS");
     if (typeof id !== "string" || !id.trim()) {
       return {
         success: false,
@@ -485,6 +491,7 @@ export async function setCouponActiveAction(
 ): Promise<ActionResult> {
   try {
     const session = await requireWritableAdmin();
+    await assertCapability(session, "MANAGE_COUPONS");
 
     if (typeof id !== "string" || !id.trim()) {
       return {

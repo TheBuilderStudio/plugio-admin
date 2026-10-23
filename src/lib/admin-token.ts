@@ -39,3 +39,32 @@ export function signAdminToken(args: { email: string; method: string; path: stri
   const signature = sign(null, Buffer.from(signingInput), key);
   return `${signingInput}.${b64url(signature)}`;
 }
+
+export class AdminAuthConfigError extends Error {}
+
+/**
+ * Headers that identify the acting admin to the backend, for one request.
+ *
+ * With a signing key configured the request carries the signed token only: the shared key is never sent, so it can be
+ * rotated or removed after the cut-over without touching the admin app. Without one (legacy mode) the shared key and
+ * the claimed actor name are sent, exactly as before.
+ *
+ * @throws AdminAuthConfigError when neither a signing key nor a shared key is configured
+ */
+export function adminAuthHeaders(args: {
+  actor: string;
+  method: string;
+  path: string;
+  apiKey?: string;
+}): Record<string, string> {
+  const token = signAdminToken({ email: args.actor, method: args.method, path: args.path });
+  if (token) {
+    return { "X-Admin-Token": token, "X-Admin-Actor": args.actor };
+  }
+  if (!args.apiKey) {
+    throw new AdminAuthConfigError(
+      "Admin authentication is not configured: set ADMIN_SIGNING_PRIVATE_KEY (signed mode) or ADMIN_API_KEY (legacy mode).",
+    );
+  }
+  return { "X-Admin-Api-Key": args.apiKey, "X-Admin-Actor": args.actor };
+}

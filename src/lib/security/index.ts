@@ -12,9 +12,10 @@
  */
 
 import { auth } from "@/auth";
-import { ADMIN_EMAILS } from "@/constants";
 import type { Session } from "next-auth";
 import { normalizeAdminEmail } from "@/lib/security/emails";
+import { isActiveBackendAdmin } from "@/lib/admin-directory";
+import { hasAdminAccess } from "@/lib/security/admin-access";
 
 export { isAdminEmail, normalizeAdminEmail } from "@/lib/security/emails";
 
@@ -34,11 +35,20 @@ export async function requireAdmin(): Promise<Session> {
     throw new Error("UNAUTHORIZED: No active session");
   }
 
-  if (!ADMIN_EMAILS.includes(email)) {
+  if (!(await hasAdminAccess(email, session?.user?.backendAdmin === true, isActiveBackendAdmin))) {
     throw new Error(`FORBIDDEN: ${email} is not an authorized admin`);
   }
 
   return session!;
+}
+
+/** The admin session, or null when the visitor is not signed in or not an admin. For pages that redirect instead of throw. */
+export async function getAdminSession(): Promise<Session | null> {
+  try {
+    return await requireAdmin();
+  } catch {
+    return null;
+  }
 }
 
 /**

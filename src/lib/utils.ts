@@ -94,3 +94,13 @@ export function truncate(text: string | null | undefined, max: number): string {
 export function daysUntil(date: Date): number {
   return Math.max(0, Math.ceil((date.getTime() - Date.now()) / 86_400_000));
 }
+
+/** Minor units (paise, cents) in the record's own currency. Amounts of different currencies are never added together. */
+export function formatMinor(minor: number | null | undefined, currency = "INR"): string {
+  const value = (minor ?? 0) / 100;
+  try {
+    return new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(value);
+  } catch {
+    return `${value.toFixed(2)} ${currency}`;
+  }
+}

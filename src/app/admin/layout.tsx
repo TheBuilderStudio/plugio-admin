@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { isAdminEmail } from "@/lib/security";
-import { AdminSidebar } from "@/components/shared/AdminSidebar";
-import { AdminTopBar } from "@/components/shared/AdminTopBar";
+import { AdminShell } from "@/components/shared/AdminShell";
+import { NAV } from "@/components/shared/nav-config";
 import { AdminReadOnlyProvider } from "@/components/shared/AdminReadOnlyContext";
-import { getActiveDbContext, hasDistinctStagingDb } from "@/lib/db";
+import { getAdminAccess } from "@/lib/admin-access";
+import { getActiveDbContext } from "@/lib/db";
 import { getPendingBetaCount } from "@/lib/db/queries";
 
 export default async function AdminLayout({
@@ -18,14 +19,15 @@ export default async function AdminLayout({
     redirect("/login");
   }
 
-  if (!isAdminEmail(session.user.email)) {
+  if (!isAdminEmail(session.user.email) && !session.user.backendAdmin) {
     redirect("/unauthorized");
   }
 
-  const hasStagingDb = hasDistinctStagingDb();
   const isReadOnly =
     process.env.READ_ONLY_MODE === "true" ||
     process.env.NEXT_PUBLIC_READ_ONLY_MODE === "true";
+
+  const access = await getAdminAccess(session);
 
   let pendingBeta = 0;
   try {
@@ -35,25 +37,22 @@ export default async function AdminLayout({
     pendingBeta = 0;
   }
 
+  const items = NAV.filter((item) => !item.needs || access.can(item.needs));
+
   return (
     <AdminReadOnlyProvider isReadOnly={isReadOnly}>
-      <div className="relative isolate flex h-dvh overflow-hidden bg-(--canvas)">
-        <AdminSidebar
-          adminName={session.user.name}
-          adminEmail={session.user.email}
-          adminImage={session.user.image}
-          hasStagingDb={hasStagingDb}
-          isReadOnly={isReadOnly}
-          pendingBeta={pendingBeta}
-        />
-
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <AdminTopBar isReadOnly={isReadOnly} pendingBeta={pendingBeta} />
-          <main className="custom-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto">
-            {children}
-          </main>
-        </div>
-      </div>
+      <AdminShell
+        adminName={session.user.name}
+        adminEmail={session.user.email}
+        adminImage={session.user.image}
+        roleLabel={access.role.replace("_", " ").toLowerCase()}
+        items={items}
+        isReadOnly={isReadOnly}
+        pendingBeta={pendingBeta}
+        badges={{ "/admin/beta?status=PENDING": pendingBeta }}
+      >
+        {children}
+      </AdminShell>
     </AdminReadOnlyProvider>
   );
 }

@@ -1,4 +1,5 @@
-import { couponRuntimeStatus, couponStatusClass } from "@/lib/coupon-expiry";
+import { couponRuntimeStatus } from "@/lib/coupon-expiry";
+import { Badge, type Tone } from "@/components/ui/badge";
 
 export function CouponStatusBadge({
   active,
@@ -8,9 +9,6 @@ export function CouponStatusBadge({
   expiresAt: Date | string | null;
 }) {
   const status = couponRuntimeStatus(active, expiresAt);
-  return (
-    <span className={`rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${couponStatusClass(status)}`}>
-      {status}
-    </span>
-  );
+  const tone: Tone = status === "Active" ? "success" : status === "Expired" ? "warning" : "neutral";
+  return <Badge tone={tone}>{status}</Badge>;
 }

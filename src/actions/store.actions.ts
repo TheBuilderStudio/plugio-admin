@@ -117,6 +117,49 @@ export async function rejectPayoutAction(id: string, reason: string): Promise<Ac
   return run(id, { reason }, "STORE_PAYOUT_REJECT", "Payout rejected and balance restored.", (a, c) => storeApi.rejectPayout(a, id, c.reason));
 }
 
+export async function createSettlementAction(): Promise<ActionResult> {
+  try {
+    const session = await requireWritableAdmin();
+    const adminEmail = session.user?.email;
+    if (!adminEmail) return { success: false, message: "No admin email on session." };
+    const batch = await storeApi.createSettlement(adminEmail);
+    logAdminAction({ action: "STORE_SETTLEMENT_CREATE", adminEmail, details: `${batch.id} payouts=${batch.payoutCount} total=${batch.totalMinor / 100}` });
+    revalidatePath("/admin/store");
+    return { success: true, message: `Batch created with ${batch.payoutCount} payouts. Download the bank file next.` };
+  } catch (error) {
+    return fail(error, "Could not create the batch.");
+  }
+}
+
+export async function settleBatchAction(id: string, reference: string): Promise<ActionResult> {
+  return run(id, { reference }, "STORE_SETTLEMENT_SETTLE", "Batch settled. Every open payout in it is now paid.", (a, c) => storeApi.settleBatch(a, id, c.reference));
+}
+
+/** `reason` may be empty only while the bank file has not been downloaded; the backend enforces that. */
+export async function cancelBatchAction(id: string, reason: string): Promise<ActionResult> {
+  try {
+    const session = await requireWritableAdmin();
+    const adminEmail = session.user?.email;
+    if (!adminEmail) return { success: false, message: "No admin email on session." };
+    if (!ID_PATTERN.test(id)) return { success: false, message: "Invalid id." };
+    const clean = text(reason, 500);
+    await storeApi.cancelBatch(adminEmail, id, clean);
+    logAdminAction({ action: "STORE_SETTLEMENT_CANCEL", adminEmail, details: `${id} ${clean}`.slice(0, 500) });
+    revalidatePath("/admin/store");
+    return { success: true, message: "Batch cancelled. Its payouts are open again." };
+  } catch (error) {
+    return fail(error, "Could not cancel the batch.");
+  }
+}
+
+export async function approveKycAction(sellerId: string): Promise<ActionResult> {
+  return run(sellerId, {}, "STORE_KYC_APPROVE", "Verified. The creator can now request payouts.", (a) => storeApi.approveKyc(a, sellerId));
+}
+
+export async function rejectKycAction(sellerId: string, reason: string): Promise<ActionResult> {
+  return run(sellerId, { reason }, "STORE_KYC_REJECT", "Rejected. The creator was told why.", (a, c) => storeApi.rejectKyc(a, sellerId, c.reason));
+}
+
 export async function dismissExceptionAction(id: string, reason: string): Promise<ActionResult> {
   return run(id, { reason }, "STORE_EXCEPTION_DISMISS", "Closed. The held amount is released to the seller.", (a, c) => storeApi.dismissException(a, id, c.reason));
 }

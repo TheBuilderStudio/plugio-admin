@@ -9,8 +9,15 @@ import { Pagination } from "@/components/shared/Pagination";
 import { StoreRowAction } from "@/components/store/StoreRowAction";
 import { CommissionPolicyForm } from "@/components/store/CommissionPolicyForm";
 import { PayoutSettingsForm } from "@/components/store/PayoutSettingsForm";
+import { Badge } from "@/components/ui/badge";
+import { statusTone, statusLabel } from "@/lib/status-tone";
 import { formatDateTime } from "@/lib/utils";
 import {
+  approveKycAction,
+  cancelBatchAction,
+  createSettlementAction,
+  settleBatchAction,
+  rejectKycAction,
   markPayoutPaidAction,
   rejectPayoutAction,
   confirmDisputeLossAction,
@@ -25,9 +32,11 @@ import {
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
-type Tab = "payouts" | "exceptions" | "orders" | "products" | "commission";
+type Tab = "payouts" | "settlements" | "kyc" | "exceptions" | "orders" | "products" | "commission";
 const TABS: { id: Tab; label: string }[] = [
   { id: "payouts", label: "Payouts" },
+  { id: "settlements", label: "Settlements" },
+  { id: "kyc", label: "Verification" },
   { id: "exceptions", label: "Refunds & disputes" },
   { id: "orders", label: "Orders" },
   { id: "products", label: "Products" },
@@ -35,7 +44,7 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 interface StorePageProps {
-  searchParams: Promise<{ tab?: string; status?: string; page?: string }>;
+  searchParams: Promise<{ tab?: string; status?: string; page?: string; recon?: string }>;
 }
 
 const EXCEPTION_LABEL: Record<"GATEWAY_REFUND" | "DISPUTE" | "PAID_SESSION_CANCELLED", string> = {
@@ -78,6 +87,8 @@ export default async function StoreAdminPage({ searchParams }: StorePageProps) {
   const page = validatePage(params.page) - 1; // backend pages are 0-based
   const status = params.status === "PAID" || params.status === "REJECTED" ? params.status : "REQUESTED";
 
+  const kycStatus = params.status === "APPROVED" || params.status === "REJECTED" ? params.status : "PENDING";
+
   return (
     <AdminPage>
       <AdminPageHeader
@@ -88,6 +99,8 @@ export default async function StoreAdminPage({ searchParams }: StorePageProps) {
       <FilterPills items={TABS.map((t) => ({ href: `/admin/store?tab=${t.id}`, label: t.label, active: tab === t.id }))} />
 
       {tab === "payouts" && <PayoutsTab actor={actor} status={status} page={page} />}
+      {tab === "settlements" && <SettlementsTab actor={actor} page={page} runRecon={params.recon === "1"} />}
+      {tab === "kyc" && <KycTab actor={actor} status={kycStatus} page={page} />}
       {tab === "exceptions" && <ExceptionsTab actor={actor} page={page} />}
       {tab === "orders" && <OrdersTab actor={actor} page={page} />}
       {tab === "products" && <ProductsTab actor={actor} page={page} />}
@@ -173,8 +186,8 @@ async function ExceptionsTab({ actor, page }: { actor: string; page: number }) {
                   </td>
                   <td className="max-w-[220px] wrap-break-word font-mono text-[12px]">{x.paymentId ?? "—"}</td>
                   <td className="text-[12.5px]">
-                    {x.state.replace("_", " ").toLowerCase()}
-                    <p className="text-[11px] text-(--ink-mute)">{x.gatewayStatus}{x.phase ? ` · ${x.phase}` : ""}</p>
+                    <Badge tone={statusTone(x.state)}>{statusLabel(x.state)}</Badge>
+                    <p className="mt-1 text-[11px] text-(--ink-mute)">{x.gatewayStatus}{x.phase ? ` · ${x.phase}` : ""}</p>
                     {x.respondBy && <p className="text-[11px] text-red-700">Respond by {formatDateTime(x.respondBy)}</p>}
                   </td>
                   <td className="whitespace-nowrap text-[12.5px]">{formatDateTime(x.createdAt)}</td>
@@ -276,6 +289,198 @@ async function PayoutsTab({ actor, status, page }: { actor: string; status: stri
   );
 }
 
+const BATCH_LABEL = { OPEN: "Open", SETTLED: "Settled", CANCELLED: "Cancelled" } as const;
+const KIND_LABEL: Record<string, string> = {
+  PAYOUT_DEBIT_MISMATCH: "Payout debits differ from payouts",
+  PAYOUT_RESTORE_MISMATCH: "Rejected payouts not restored correctly",
+  SALE_CREDIT_MISMATCH: "Sale credit differs from the order",
+  PLATFORM_FEE_MISMATCH: "Platform fee differs from the order",
+  PAID_WITHOUT_REFERENCE: "Paid with no bank reference",
+};
+
+async function SettlementsTab({ actor, page, runRecon }: { actor: string; page: number; runRecon: boolean }) {
+  let batches;
+  let report = null;
+  try {
+    // Reconciliation scans every order and ledger entry, so it runs on request, not on every page view.
+    [batches, report] = await Promise.all([storeApi.settlements(actor, page), runRecon ? storeApi.reconciliation(actor) : null]);
+  } catch (e) {
+    return <ErrorCard error={e} />;
+  }
+  return (
+    <>
+      <AdminCard>
+        {!report ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[13px] font-semibold">Reconciliation</p>
+              <p className="text-[12.5px] text-(--ink-soft)">Checks the ledger against orders and payouts. It reads every order, so run it when you need it.</p>
+            </div>
+            <Link href="/admin/store?tab=settlements&recon=1" className="rounded-lg border border-(--line) px-3 py-1.5 text-[12px] font-semibold hover:bg-[#F7F4EE]">Run reconciliation</Link>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[13px] font-semibold">Reconciliation</p>
+                <p className={`text-[12.5px] ${report.balanced ? "text-emerald-700" : "font-semibold text-red-700"}`}>
+                  {report.balanced
+                    ? "Ledger, orders and payouts agree."
+                    : `${report.discrepancies.length} item(s) need a look. Booking earnings are not checked yet.`}
+                </p>
+              </div>
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-[12.5px] sm:grid-cols-4">
+                <div><dt className="text-(--ink-mute)">Owed to creators</dt><dd className="font-semibold tabular-nums">{inr(report.owedToCreatorsMinor)}</dd></div>
+                <div><dt className="text-(--ink-mute)">Ledger total</dt><dd className="font-semibold tabular-nums">{inr(report.ledgerTotalMinor)}</dd></div>
+                <div><dt className="text-(--ink-mute)">Payouts waiting</dt><dd className="font-semibold tabular-nums">{inr(report.requestedPayoutsMinor)}</dd></div>
+                <div><dt className="text-(--ink-mute)">Paid out</dt><dd className="font-semibold tabular-nums">{inr(report.paidPayoutsMinor)}</dd></div>
+              </dl>
+            </div>
+            {report.discrepancies.length > 0 && (
+              <div className="mt-4 overflow-x-auto">
+                <table className="admin-table">
+                  <thead><tr><th>Problem</th><th>Subject</th><th>Expected</th><th>Actual</th></tr></thead>
+                  <tbody>
+                    {report.discrepancies.map((d, i) => (
+                      <tr key={`${d.kind}-${d.subjectId}-${i}`}>
+                        <td><p className="font-semibold">{KIND_LABEL[d.kind] ?? d.kind}</p><p className="text-[11.5px] text-(--ink-mute)">{d.detail}</p></td>
+                        <td className="font-mono text-[12px]">
+                          {d.sellerId ? <Link href={`/admin/store/seller/${d.sellerId}`} className="underline">{d.subjectId}</Link> : d.subjectId}
+                        </td>
+                        <td className="tabular-nums">{d.expectedMinor === null ? "—" : inr(d.expectedMinor)}</td>
+                        <td className="tabular-nums">{d.actualMinor === null ? "—" : inr(d.actualMinor)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+      </AdminCard>
+
+      <AdminCard padded={false}>
+        <div className="flex items-center justify-between gap-3 p-4">
+          <p className="text-[12.5px] text-(--ink-soft)">Group every open payout into one batch, download the bank file, then settle it with the bank&apos;s reference.</p>
+          <StoreRowAction label="Create batch from open payouts" fieldLabel={null} confirmLabel="Create batch" action={createSettlementAction} />
+        </div>
+        {batches.items.length === 0 ? (
+          <EmptyState icon={Store} title="No batches yet" description="Batches you create appear here." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="admin-table">
+              <thead><tr><th>Batch</th><th>Payouts</th><th>Total</th><th>Status</th><th>Created</th><th>Action</th></tr></thead>
+              <tbody>
+                {batches.items.map((b) => (
+                  <tr key={b.id}>
+                    <td className="font-mono text-[12px]">{b.id.slice(0, 8)}<p className="font-sans text-[11.5px] text-(--ink-mute)">{b.createdBy}</p></td>
+                    <td className="tabular-nums">{b.payoutCount}</td>
+                    <td className="font-semibold tabular-nums">{inr(b.totalMinor)}</td>
+                    <td><Badge tone={statusTone(b.status)}>{BATCH_LABEL[b.status]}</Badge>{b.cancelReason && <p className="text-[11.5px] text-(--ink-mute)">{b.cancelReason}</p>}{b.bankReference && <p className="text-[11.5px] text-(--ink-mute)">Ref {b.bankReference}</p>}</td>
+                    <td className="whitespace-nowrap text-[12.5px]">{formatDateTime(b.createdAt)}</td>
+                    <td>
+                      <div className="flex flex-col gap-2">
+                        {b.status !== "CANCELLED" && (
+                          <a href={`/api/export/settlement/${b.id}`} className="text-[12px] font-semibold underline">Download bank file</a>
+                        )}
+                        {b.status === "OPEN" && (
+                          <>
+                            <StoreRowAction label="Mark settled" fieldLabel="Bank reference" placeholder="UTR or batch reference"
+                              confirmLabel="Settle batch" action={settleBatchAction.bind(null, b.id)} />
+                            {b.exportedAt ? (
+                              <>
+                                <p className="max-w-[220px] text-[11px] text-(--ink-soft)">Bank file downloaded {formatDateTime(b.exportedAt)}. The bank may have paid it: check the statement before cancelling.</p>
+                                <StoreRowAction label="Cancel batch" fieldLabel="Reason" placeholder="Why cancel after download?" tone="danger" confirmLabel="Cancel batch"
+                                  action={cancelBatchAction.bind(null, b.id)} />
+                              </>
+                            ) : (
+                              <StoreRowAction label="Cancel batch" fieldLabel={null} tone="danger" confirmLabel="Cancel batch"
+                                action={cancelBatchAction.bind(null, b.id, "")} />
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <Pager result={batches} searchParams={{ tab: "settlements" }} />
+      </AdminCard>
+    </>
+  );
+}
+
+async function KycTab({ actor, status, page }: { actor: string; status: string; page: number }) {
+  let result;
+  try {
+    result = await storeApi.kyc(actor, status, page);
+  } catch (e) {
+    return <ErrorCard error={e} />;
+  }
+  return (
+    <>
+      <FilterPills
+        items={(["PENDING", "APPROVED", "REJECTED"] as const).map((s) => ({
+          href: `/admin/store?tab=kyc&status=${s}`,
+          label: s === "PENDING" ? "To review" : s === "APPROVED" ? "Approved" : "Rejected",
+          active: status === s,
+        }))}
+      />
+      <AdminCard padded={false}>
+        {result.items.length === 0 ? (
+          <EmptyState icon={Store} title="Nothing here" description="Creator identity submissions appear in this queue." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="admin-table">
+              <thead>
+                <tr><th>Creator</th><th>Name and PAN</th><th>Payout account</th><th>Submitted</th><th>Action</th></tr>
+              </thead>
+              <tbody>
+                {result.items.map((k) => (
+                  <tr key={k.sellerId}>
+                    <td>
+                      <p className="font-semibold">{k.sellerName ?? "—"}</p>
+                      <p className="text-[11.5px] text-(--ink-mute)">{k.sellerEmail}</p>
+                    </td>
+                    <td>
+                      <p className="font-semibold">{k.legalName}</p>
+                      <p className="font-mono text-[12px]">{k.pan}</p>
+                      {k.duplicatePan && <p className="text-[11.5px] font-semibold text-red-700">Same PAN as another creator. Check before approving.</p>}
+                    </td>
+                    <td className="max-w-[260px] wrap-break-word text-[12px]">
+                      <p className="font-mono">{k.payoutDestination ?? "No payout details yet"}</p>
+                      <p className={k.nameMatchesPayout ? "text-emerald-700" : "font-semibold text-red-700"}>
+                        {k.nameMatchesPayout ? "Name matches the account holder" : "Name differs from the account holder"}
+                      </p>
+                    </td>
+                    <td className="whitespace-nowrap text-[12.5px]">{formatDateTime(k.submittedAt)}</td>
+                    <td>
+                      {k.status === "PENDING" ? (
+                        <div className="flex flex-col gap-2">
+                          <StoreRowAction label="Approve" fieldLabel={null} confirmLabel="Confirm approval"
+                            disabled={!k.payoutDestination} action={approveKycAction.bind(null, k.sellerId)} />
+                          <StoreRowAction label="Reject" fieldLabel="Reason" tone="danger" confirmLabel="Reject"
+                            action={rejectKycAction.bind(null, k.sellerId)} />
+                        </div>
+                      ) : (
+                        <p className="text-[12px] text-(--ink-soft)">{k.status === "REJECTED" ? k.rejectReason : "Approved"} · {k.reviewedBy}</p>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <Pager result={result} searchParams={{ tab: "kyc", status }} />
+      </AdminCard>
+    </>
+  );
+}
+
 async function OrdersTab({ actor, page }: { actor: string; page: number }) {
   let result;
   try {
@@ -301,8 +506,8 @@ async function OrdersTab({ actor, page }: { actor: string; page: number }) {
                   <td className="text-[12.5px]">{o.buyerEmail}</td>
                   <td className="tabular-nums">{inr(o.amountMinor)}<p className="text-[11px] text-(--ink-mute)">fee {inr(o.platformFeeMinor)}</p></td>
                   <td className="text-[12.5px]">
-                    {o.status}
-                    <p className="text-[11px] text-(--ink-mute)">{formatDateTime(o.paidAt)}</p>
+                    <Badge tone={statusTone(o.status)}>{statusLabel(o.status)}</Badge>
+                    <p className="mt-1 text-[11px] text-(--ink-mute)">{formatDateTime(o.paidAt)}</p>
                   </td>
                 </tr>
               ))}
@@ -339,7 +544,7 @@ async function ProductsTab({ actor, page }: { actor: string; page: number }) {
                   <td>{p.sellerName ?? "—"}<p className="text-[11px] text-(--ink-mute)">@{p.sellerUsername}</p></td>
                   <td className="tabular-nums">{inr(p.priceMinor)}</td>
                   <td className="tabular-nums">{p.salesCount} / {p.viewCount}</td>
-                  <td className="text-[12.5px]">{p.status}{p.suspendedReason && <p className="text-[11px] text-(--ink-mute)">{p.suspendedReason}</p>}</td>
+                  <td className="text-[12.5px]"><Badge tone={statusTone(p.status)}>{statusLabel(p.status)}</Badge>{p.suspendedReason && <p className="mt-1 text-[11px] text-(--ink-mute)">{p.suspendedReason}</p>}</td>
                   <td>
                     {p.status === "SUSPENDED" ? (
                       <StoreRowAction label="Restore" fieldLabel={null} confirmLabel="Restore to draft"

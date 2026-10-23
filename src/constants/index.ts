@@ -6,11 +6,8 @@
  * To add or remove admins, update this array and redeploy.
  */
 
-const defaultAdminEmails = [
-  "manavhustles@gmail.com",
-  "427rohitkumar@gmail.com",
-  "admin@plugio.app",
-];
+// The owner. Everyone else is added on the Admins page (backend admin list), not here.
+const defaultAdminEmails = ["manavhustles@gmail.com"];
 
 const envAdminEmails = process.env.ADMIN_EMAILS
   ? process.env.ADMIN_EMAILS.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)

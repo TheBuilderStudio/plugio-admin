@@ -1,13 +1,15 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { Users, Search, Download } from "lucide-react";
 import { requireAdmin } from "@/lib/security";
-import { getUsers, getDashboardStats } from "@/lib/db/queries";
+import { getUsers, getDashboardStats, USER_SORTS, type UserSort } from "@/lib/db/queries";
 import { getActiveDbContext } from "@/lib/db";
 import { validateSearch, validatePage } from "@/lib/validation";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Pagination } from "@/components/shared/Pagination";
+import { SavedViews } from "@/components/shared/SavedViews";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { AdminPage, AdminCard, FilterPills } from "@/components/ui/page-shell";
+import { AdminPage, AdminPageHeader, AdminCard, FilterPills } from "@/components/ui/page-shell";
 import { formatDate, getInitials } from "@/lib/utils";
 import type { AdminUserListFilter } from "@/types";
 
@@ -24,7 +26,7 @@ const USER_FILTERS: { value: AdminUserListFilter; label: string }[] = [
 const USER_FILTER_VALUES = USER_FILTERS.map((tab) => tab.value);
 
 interface UsersPageProps {
-  searchParams: Promise<{ search?: string; page?: string; filter?: string }>;
+  searchParams: Promise<{ search?: string; page?: string; filter?: string; sort?: string; dir?: string }>;
 }
 
 export default async function UsersPage({ searchParams }: UsersPageProps) {
@@ -38,14 +40,30 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
     ? (filterRaw as AdminUserListFilter)
     : "ALL";
 
+  const sort: UserSort = USER_SORTS.includes(params.sort as UserSort) ? (params.sort as UserSort) : "joined";
+  const dir = params.dir === "asc" ? "asc" : "desc";
+
   const dbContext = await getActiveDbContext();
   const [result, stats] = await Promise.all([
-    getUsers(search, filter, page, 20),
+    getUsers(search, filter, page, 20, sort, dir),
     getDashboardStats(dbContext),
   ]);
 
+  const sortHref = (key: UserSort) => {
+    const p = new URLSearchParams();
+    if (filter !== "ALL") p.set("filter", filter);
+    if (search) p.set("search", search);
+    p.set("sort", key);
+    p.set("dir", sort === key && dir === "desc" ? "asc" : "desc");
+    return `/admin/users?${p.toString()}`;
+  };
   return (
     <AdminPage>
+      <AdminPageHeader kicker="Work" title="Creators" description="Everyone who has signed in to Plugio. Filters show who needs a nudge: approved but no trial, trialing but never published, or trial ending." />
+      <Suspense fallback={null}>
+        <SavedViews pageKey="creators" />
+      </Suspense>
+
       <AdminCard padded={false}>
         <div className="flex flex-col gap-3 border-b border-(--line) px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
@@ -88,8 +106,11 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
             description={
               search
                 ? `Nothing matched “${search}”.`
-                : "People appear here after they sign in with Google."
+                : filter !== "ALL"
+                  ? "Nobody is in this group right now. That can be good news."
+                  : "People appear here after they sign in with Google."
             }
+            action={search || filter !== "ALL" ? { label: "Clear filters", href: "/admin/users" } : undefined}
           />
         ) : (
           <>
@@ -97,10 +118,12 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Creator</th>
-                    <th>Joined</th>
+                    <SortTh k="name" active={sort} dir={dir} href={sortHref("name")}>Creator</SortTh>
+                    <SortTh k="joined" active={sort} dir={dir} href={sortHref("joined")}>Joined</SortTh>
                     <th>Access</th>
                     <th>Plan</th>
+                    <SortTh k="channels" active={sort} dir={dir} href={sortHref("channels")} right>Channels</SortTh>
+                    <SortTh k="published" active={sort} dir={dir} href={sortHref("published")} right>Published</SortTh>
                     <th className="text-right"> </th>
                   </tr>
                 </thead>
@@ -132,6 +155,8 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                       <td>
                         <StatusBadge status={user.subscription_status ?? "NONE"} />
                       </td>
+                      <td className="text-right tabular-nums text-(--ink-soft)">{user.channels ?? 0}</td>
+                      <td className="text-right tabular-nums text-(--ink-soft)">{user.published ?? 0}</td>
                       <td className="text-right">
                         <Link href={`/admin/users/${user.id}`} className="text-[12.5px] font-semibold text-brand-500">
                           Open
@@ -152,6 +177,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                 searchParams={{
                   ...(search ? { search } : {}),
                   ...(filter !== "ALL" ? { filter } : {}),
+                  ...(sort !== "joined" || dir !== "desc" ? { sort, dir } : {}),
                 }}
               />
             </div>
@@ -159,5 +185,33 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
         )}
       </AdminCard>
     </AdminPage>
+  );
+}
+
+function SortTh({
+  k,
+  active,
+  dir,
+  href,
+  right,
+  children,
+}: {
+  k: UserSort;
+  active: UserSort;
+  dir: "asc" | "desc";
+  href: string;
+  right?: boolean;
+  children: string;
+}) {
+  const on = active === k;
+  return (
+    <th className={right ? "text-right" : undefined} aria-sort={on ? (dir === "asc" ? "ascending" : "descending") : "none"}>
+      <Link href={href} className="inline-flex items-center gap-1 hover:text-(--ink)">
+        {children}
+        <span aria-hidden className={on ? "text-brand-500" : "opacity-30"}>
+          {on && dir === "asc" ? "↑" : "↓"}
+        </span>
+      </Link>
+    </th>
   );
 }

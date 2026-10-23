@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { ClipboardList, Search, Instagram, Youtube, Facebook, Download } from "lucide-react";
 import { requireAdmin } from "@/lib/security";
@@ -5,9 +6,10 @@ import { getBetaRequests } from "@/lib/db/queries";
 import { validateSearch, validatePage, validateStatusFilter } from "@/lib/validation";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Pagination } from "@/components/shared/Pagination";
+import { SavedViews } from "@/components/shared/SavedViews";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { BetaActions } from "@/components/beta/BetaActions";
-import { AdminPage, AdminCard, FilterPills } from "@/components/ui/page-shell";
+import { AdminPage, AdminPageHeader, AdminCard, FilterPills } from "@/components/ui/page-shell";
 import { formatRelativeTime, formatFollowers, getInitials } from "@/lib/utils";
 
 interface BetaPageProps {
@@ -39,6 +41,11 @@ export default async function BetaPage({ searchParams }: BetaPageProps) {
 
   return (
     <AdminPage>
+      <AdminPageHeader kicker="Work" title="Access requests" description="People who applied for access. Approving gives access only; it does not grant a paid plan." />
+      <Suspense fallback={null}>
+        <SavedViews pageKey="access-requests" />
+      </Suspense>
+
       <AdminCard padded={false}>
         <div className="flex flex-col gap-3 border-b border-(--line) px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <FilterPills

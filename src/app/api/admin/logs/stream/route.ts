@@ -1,5 +1,5 @@
 import { requireAdmin } from "@/lib/security";
-import { signAdminToken } from "@/lib/admin-token";
+import { AdminAuthConfigError, adminAuthHeaders } from "@/lib/admin-token";
 
 export const dynamic = "force-dynamic";
 
@@ -10,20 +10,23 @@ export async function GET(request: Request) {
     const adminEmail = session.user?.email ?? "";
 
     const backendUrl = process.env.BACKEND_API_URL || "http://localhost:8080";
-    const apiKey = process.env.ADMIN_API_KEY;
-    if (!apiKey) {
-      console.error("[logs/stream] ADMIN_API_KEY is not configured");
+    let headers: Record<string, string>;
+    try {
+      headers = adminAuthHeaders({
+        actor: adminEmail,
+        method: "GET",
+        path: "/api/admin/logs/stream",
+        apiKey: process.env.ADMIN_API_KEY,
+      });
+    } catch (err) {
+      if (!(err instanceof AdminAuthConfigError)) throw err;
+      console.error(`[logs/stream] ${err.message}`);
       return new Response("Admin log stream is not configured", { status: 503 });
     }
 
-    const token = signAdminToken({ email: adminEmail, method: "GET", path: "/api/admin/logs/stream" });
-
     // 2. Open Server-Sent Events stream connection to the Spring Boot backend
     const response = await fetch(`${backendUrl}/api/admin/logs/stream`, {
-      headers: {
-        "X-Admin-Api-Key": apiKey,
-        ...(token ? { "X-Admin-Token": token } : {}),
-      },
+      headers,
       cache: "no-store",
       signal: request.signal,
     });

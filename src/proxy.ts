@@ -16,10 +16,16 @@ import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import { isAdminEmail } from "@/lib/security/emails";
 
+// Admins from the backend list carry a flag set at sign-in. The proxy only gates the UI shell; requireAdmin() asks
+// the backend again on every page and action.
+const isAdmin = (email: string | null | undefined, backendAdmin: boolean | undefined) =>
+  isAdminEmail(email) || (!!email && backendAdmin === true);
+
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
   const email = session?.user?.email;
+  const backendAdmin = session?.user?.backendAdmin;
 
   // Allow Next.js internals and static files. Protected prefixes are excluded from the
   // "contains a dot" shortcut so a crafted path such as /admin/x.y cannot skip the auth checks below.
@@ -39,7 +45,7 @@ export default auth((req) => {
 
   // Root → redirect to dashboard (if admin) or login
   if (pathname === "/") {
-    if (isAdminEmail(email)) {
+    if (isAdmin(email, backendAdmin)) {
       return NextResponse.redirect(new URL("/admin/dashboard", req.url));
     }
     return NextResponse.redirect(new URL("/login", req.url));
@@ -62,7 +68,7 @@ export default auth((req) => {
       return NextResponse.redirect(loginUrl);
     }
 
-    if (!isAdminEmail(email)) {
+    if (!isAdmin(email, backendAdmin)) {
       if (pathname.startsWith("/api/")) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
@@ -74,7 +80,7 @@ export default auth((req) => {
 
   // Login page — redirect authenticated admins to dashboard
   if (pathname === "/login") {
-    if (isAdminEmail(email)) {
+    if (isAdmin(email, backendAdmin)) {
       return NextResponse.redirect(new URL("/admin/dashboard", req.url));
     }
     return NextResponse.next();

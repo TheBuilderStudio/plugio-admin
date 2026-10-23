@@ -159,6 +159,16 @@ export const getPendingBetaCount = unstable_cache(
 
 // ─── Users ────────────────────────────────────────────────
 
+export type UserSort = "joined" | "name" | "channels" | "published";
+/** Whitelisted ORDER BY fragments: the sort key from the URL never reaches SQL as text. */
+const USER_SORT_SQL: Record<UserSort, string> = {
+  joined: "u.created_at",
+  name: "u.name",
+  channels: "channels",
+  published: "published",
+};
+export const USER_SORTS = Object.keys(USER_SORT_SQL) as UserSort[];
+
 /**
  * Paginated user list with optional search.
  * Searches across name AND email columns.
@@ -167,7 +177,9 @@ export async function getUsers(
   search: string,
   filter: AdminUserListFilter,
   page: number,
-  pageSize: number = PAGE_SIZE
+  pageSize: number = PAGE_SIZE,
+  sort: UserSort = "joined",
+  dir: "asc" | "desc" = "desc"
 ): Promise<PaginatedResult<AdminUserRow>> {
   const offset = (page - 1) * pageSize;
   const searchPattern = search.trim() ? `%${search.trim()}%` : "%";
@@ -210,11 +222,13 @@ export async function getUsers(
       u.created_at,
       u.access_status,
       u.beta_approved,
-      s.subscription_status
+      s.subscription_status,
+      (SELECT COUNT(*) FROM social_accounts sa WHERE sa.user_id = u.id AND sa.is_active = 1) AS channels,
+      (SELECT COUNT(*) FROM content c WHERE c.user_id = u.id AND LOWER(c.status) = 'published') AS published
     FROM users u
     LEFT JOIN subscriptions s ON s.user_id = u.id
     WHERE (u.name LIKE ? OR u.email LIKE ?) ${filterClause}
-    ORDER BY u.created_at DESC
+    ORDER BY ${USER_SORT_SQL[sort] ?? USER_SORT_SQL.joined} ${dir === "asc" ? "ASC" : "DESC"}, u.created_at DESC
     LIMIT ${safePageSize} OFFSET ${safeOffset}
   `,
     [searchPattern, searchPattern]
@@ -237,6 +251,8 @@ export async function getUsers(
       access_status: r.access_status,
       beta_approved: Boolean(r.beta_approved),
       subscription_status: r.subscription_status ?? null,
+      channels: Number(r.channels ?? 0),
+      published: Number(r.published ?? 0),
     })),
     total,
     page,
@@ -1327,3 +1343,19 @@ export async function updateBillingPlanSettings(params: {
 
 
 
+
+// ─── Quick search (command palette) ──────────────────────
+
+export async function searchUsersQuick(
+  term: string
+): Promise<{ id: string; name: string | null; email: string }[]> {
+  const pattern = `%${escapeLikePattern(term)}%`;
+  const [rows] = await pool.execute<any[]>(
+    `SELECT id, name, email FROM users
+     WHERE name LIKE ? OR email LIKE ? OR id = ?
+     ORDER BY created_at DESC
+     LIMIT 8`,
+    [pattern, pattern, term]
+  );
+  return rows.map((r) => ({ id: r.id, name: r.name, email: r.email }));
+}

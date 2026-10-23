@@ -8,7 +8,7 @@ import {
 } from "@/lib/db/queries";
 import { CouponDesks } from "@/components/coupons/CouponDesks";
 import { CouponRedemptionsTable } from "@/components/coupons/CouponRedemptionsTable";
-import { AdminPage } from "@/components/ui/page-shell";
+import { AdminPage, AdminPageHeader } from "@/components/ui/page-shell";
 import { PLAN_CATALOG_USD } from "@/constants";
 import type { Metadata } from "next";
 
@@ -47,6 +47,8 @@ export default async function CouponsPage() {
 
   return (
     <AdminPage>
+      <AdminPageHeader kicker="Money" title="Coupons" description="Trial coupons start a trial; plan coupons take a percentage off a paid plan." />
+
       {loadError ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-medium text-amber-950">
           {loadError}

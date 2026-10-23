@@ -1,10 +1,16 @@
 export default function AdminLoading() {
   return (
-    <div className="flex h-full min-h-[50vh] items-center justify-center p-8">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-(--line-strong) border-t-brand-500" />
-        <p className="text-[13px] font-medium text-(--ink-mute)">Loading console…</p>
+    <div className="admin-page" role="status" aria-label="Loading">
+      <div className="space-y-2">
+        <div className="admin-skeleton h-3 w-24" />
+        <div className="admin-skeleton h-8 w-64" />
       </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="admin-skeleton h-24" />
+        ))}
+      </div>
+      <div className="admin-skeleton h-72" />
     </div>
   );
 }

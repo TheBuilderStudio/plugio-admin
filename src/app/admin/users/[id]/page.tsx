@@ -23,6 +23,13 @@ import {
   buildCreatorOutreachScript,
   pickSuggestedTrialCoupon,
 } from "@/lib/beta-outreach";
+import { Badge } from "@/components/ui/badge";
+import { statusTone, statusLabel } from "@/lib/status-tone";
+import { CreatorNotes } from "@/components/users/CreatorNotes";
+import { listCreatorNotes } from "@/lib/db/notes";
+import { getAdminAccess } from "@/lib/admin-access";
+import { getCreatorMarketplace } from "@/lib/db/marketplace";
+import { formatMinor } from "@/lib/utils";
 import { AdminPage, AdminCard } from "@/components/ui/page-shell";
 import {
   formatDate,
@@ -46,7 +53,7 @@ export async function generateMetadata({
 }
 
 export default async function UserDetailPage({ params }: UserDetailPageProps) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const { id } = await params;
 
@@ -61,6 +68,19 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
   if (!user) notFound();
 
   const paymentEvents = await getPaymentAuditEventsForUser(userId);
+  const market = await getCreatorMarketplace(userId).catch(() => null);
+  const adminEmail = (session.user?.email ?? "").toLowerCase();
+  const canDeleteAnyNote = (await getAdminAccess(session)).can("MANAGE_ADMINS");
+  const rawNotes = await listCreatorNotes(userId).catch(() => null);
+  const notes = rawNotes?.map((n) => ({
+    id: n.id,
+    author: n.author_email,
+    body: n.body,
+    at: n.created_at.toISOString(),
+    mine: n.author_email.toLowerCase() === adminEmail,
+    canDelete: canDeleteAnyNote || n.author_email.toLowerCase() === adminEmail,
+  }));
+  const readOnlyMode = process.env.READ_ONLY_MODE === "true" || process.env.NEXT_PUBLIC_READ_ONLY_MODE === "true";
   const coupons = await listTrialCoupons().catch(() => []);
   const suggestedCoupon = pickSuggestedTrialCoupon(coupons);
   const catalog = await getBillingPlanSettings().catch(() => undefined);
@@ -281,17 +301,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
                       <p className="text-[13px] font-semibold text-(--ink)">{evt.event_type}</p>
                       <p className="text-[12px] text-(--ink-soft)">{formatDateTime(evt.created_at)}</p>
                     </div>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                        evt.status === "SUCCESS"
-                          ? "badge-approved"
-                          : evt.status === "FAILED"
-                            ? "badge-rejected"
-                            : "badge-none"
-                      }`}
-                    >
-                      {evt.status}
-                    </span>
+                    <Badge tone={statusTone(evt.status)}>{statusLabel(evt.status)}</Badge>
                   </div>
                 ))}
               </div>
@@ -325,13 +335,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
                     </p>
                     <p className="text-[12px] text-(--ink-soft)">{account.account_type}</p>
                   </div>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                      account.is_active ? "badge-approved" : "badge-none"
-                    }`}
-                  >
-                    {account.is_active ? "Active" : "Inactive"}
-                  </span>
+                  <Badge tone={account.is_active ? "success" : "neutral"}>{account.is_active ? "Active" : "Inactive"}</Badge>
                 </div>
               ))}
             </div>
@@ -360,6 +364,71 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
           </div>
         </AdminCard>
 
+        {market && (
+          <AdminCard className="lg:col-span-2">
+            <SectionTitle icon={CreditCard} title="Marketplace" />
+            <div className="mt-4 grid grid-cols-1 gap-x-8 sm:grid-cols-2">
+              <div>
+                <InfoRow label="Store sales (30 days)" value={moneyLine(market.store)} />
+                <InfoRow label="Store sales (all time)" value={moneyLine(market.storeTotal)} />
+                <InfoRow label="Paid sessions (all time)" value={moneyLine(market.sessions)} />
+                <InfoRow
+                  label="Products"
+                  value={`${market.products.live} live of ${market.products.total}${market.products.suspended ? `, ${market.products.suspended} suspended` : ""}`}
+                />
+              </div>
+              <div>
+                <InfoRow
+                  label="Sessions"
+                  value={`${market.bookings.upcoming} upcoming · ${market.bookings.completed} done · ${market.bookings.cancelled} cancelled`}
+                />
+                <InfoRow
+                  label="Cancelled by creator (90 days)"
+                  value={
+                    <span className={market.bookings.cancelledByCreator90d >= 3 ? "font-semibold text-red-700" : ""}>
+                      {market.bookings.cancelledByCreator90d}
+                    </span>
+                  }
+                />
+                <InfoRow label="Brand inquiries" value={`${market.inquiries.total} (${market.inquiries.unread} unread)`} />
+                <InfoRow
+                  label="Identity check"
+                  value={
+                    market.kyc ? (
+                      <Link href={`/admin/store?tab=kyc&status=${market.kyc.status}`} className="font-semibold text-brand-500 hover:underline">
+                        {market.kyc.status.toLowerCase()}
+                      </Link>
+                    ) : (
+                      "Not submitted"
+                    )
+                  }
+                />
+                <InfoRow
+                  label="Payouts"
+                  value={
+                    <Link href={`/admin/store/seller/${user.id}`} className="font-semibold text-brand-500 hover:underline">
+                      {market.payouts.requestedCount > 0
+                        ? `${market.payouts.requestedCount} waiting (${formatMinor(market.payouts.requestedMinor, "INR")})`
+                        : `Paid out ${formatMinor(market.payouts.paidMinor, "INR")}`}
+                    </Link>
+                  }
+                />
+              </div>
+            </div>
+          </AdminCard>
+        )}
+
+        <AdminCard className="lg:col-span-2">
+          <SectionTitle icon={MessageSquare} title="Admin notes" />
+          {notes ? (
+            <CreatorNotes userId={user.id} notes={notes} readOnly={readOnlyMode} />
+          ) : (
+            <p className="mt-4 text-[13px] text-(--ink-mute)">
+              Notes are not available yet. Apply backend migration V90 (admin_creator_notes) on this database.
+            </p>
+          )}
+        </AdminCard>
+
         <AdminCard className="lg:col-span-2">
           <SectionTitle title="Profile" />
           <div className="mt-4 grid grid-cols-1 gap-x-8 sm:grid-cols-2">
@@ -373,6 +442,11 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
       </div>
     </AdminPage>
   );
+}
+
+function moneyLine(rows: { currency: string; count: number; grossMinor: number }[]) {
+  if (rows.length === 0) return "None";
+  return rows.map((r) => `${formatMinor(r.grossMinor, r.currency)} (${r.count})`).join(" · ");
 }
 
 function SectionTitle({

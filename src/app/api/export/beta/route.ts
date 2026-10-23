@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/security";
 import { pool } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { csvCell } from "@/lib/csv";
 
 export async function GET() {
   try {
@@ -41,13 +42,7 @@ export async function GET() {
       "FB Followers",
     ];
 
-    const escapeCsv = (val: unknown) => {
-      if (val === null || val === undefined) return '""';
-      const str = String(val).replace(/"/g, '""');
-      return `"${str}"`;
-    };
-
-    const csvRows = [headers.map(escapeCsv).join(",")];
+    const csvRows = [headers.map(csvCell).join(",")];
 
     for (const row of rows) {
       csvRows.push(
@@ -66,7 +61,7 @@ export async function GET() {
           row.youtube_followers,
           row.facebook_followers,
         ]
-          .map(escapeCsv)
+          .map(csvCell)
           .join(",")
       );
     }

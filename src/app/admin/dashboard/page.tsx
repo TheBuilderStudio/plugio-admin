@@ -3,7 +3,12 @@ import { getAdminOverview } from "@/lib/db/admin-overview";
 import { getActiveDbContext } from "@/lib/db";
 import { readRecentAuditLogs } from "@/lib/logger";
 import { getBetaRequests } from "@/lib/db/queries";
-import { OverviewView } from "@/components/dashboard/overview-view";
+import { OverviewView, type ActionItem } from "@/components/dashboard/overview-view";
+import { getTrendSeries } from "@/lib/db/health";
+import { getMarketplacePulse, type MarketplacePulse } from "@/lib/db/marketplace";
+import { getFunnel, getRevenueSeries, getRetention } from "@/lib/db/growth";
+import { getAdminAccess } from "@/lib/admin-access";
+import { storeApi } from "@/lib/store-api";
 import type { AdminOverviewPayload, BetaRequestRow, BusinessOverview } from "@/types";
 
 export const revalidate = 60;
@@ -71,6 +76,34 @@ export default async function DashboardPage() {
   let auditLogs: Awaited<ReturnType<typeof readRecentAuditLogs>> = [];
   let pendingQueue: BetaRequestRow[] = [];
   let loadError: string | null = null;
+  let trends: Awaited<ReturnType<typeof getTrendSeries>> | null = null;
+  const storeItems: ActionItem[] = [];
+
+  const access = await getAdminAccess(admin);
+  const actor = admin.user?.email ?? "";
+  if (access.can("VIEW_MONEY")) {
+    const [payouts, kyc, exceptions] = await Promise.allSettled([
+      storeApi.payouts(actor, "REQUESTED", 0),
+      storeApi.kyc(actor, "PENDING", 0),
+      storeApi.exceptions(actor, true, 0),
+    ]);
+    if (payouts.status === "fulfilled" && payouts.value.total > 0)
+      storeItems.push({ label: "Seller payouts to pay", count: payouts.value.total, href: "/admin/store?tab=payouts", tone: "money" });
+    if (kyc.status === "fulfilled" && kyc.value.total > 0)
+      storeItems.push({ label: "Seller identity checks to review", count: kyc.value.total, href: "/admin/store?tab=kyc", tone: "money" });
+    if (exceptions.status === "fulfilled" && exceptions.value.total > 0)
+      storeItems.push({ label: "Refunds and disputes open", count: exceptions.value.total, href: "/admin/store?tab=exceptions", tone: "urgent" });
+  }
+  let pulse: MarketplacePulse | null = null;
+  pulse = await getMarketplacePulse().catch(() => null);
+  if (pulse && pulse.refundPending > 0)
+    storeItems.push({ label: "Customer refunds stuck at the gateway", count: pulse.refundPending, href: "/admin/bookings?filter=NEEDS_ATTENTION", tone: "urgent" });
+  const [funnel, revenue, retention] = await Promise.all([
+    getFunnel().catch(() => null),
+    access.can("VIEW_MONEY") ? getRevenueSeries(30).catch(() => null) : Promise.resolve(null),
+    getRetention().catch(() => null),
+  ]);
+  trends = await getTrendSeries(dbContext, 30).catch(() => null);
 
   try {
     const [overviewResult, logsResult, queueResult] = await Promise.allSettled([
@@ -106,6 +139,12 @@ export default async function DashboardPage() {
       auditLogs={auditLogs}
       pendingQueue={pendingQueue}
       loadError={loadError}
+      storeItems={storeItems}
+      trends={trends}
+      pulse={pulse}
+      funnel={funnel}
+      revenueSeries={revenue}
+      retention={retention}
     />
   );
 }

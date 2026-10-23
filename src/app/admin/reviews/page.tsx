@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/security";
 import { reviewApi } from "@/lib/store-api";
 import { validatePage } from "@/lib/validation";
 import { AdminPage, AdminPageHeader, AdminCard, FilterPills } from "@/components/ui/page-shell";
+import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pagination } from "@/components/shared/Pagination";
 import { StoreRowAction } from "@/components/store/StoreRowAction";
@@ -65,7 +66,7 @@ export default async function ReviewsAdminPage({ searchParams }: ReviewsPageProp
                   <span className="text-[11.5px] text-(--ink-mute)">
                     for {r.creatorName ?? "creator"}{r.creatorUsername ? ` (@${r.creatorUsername})` : ""}
                   </span>
-                  {r.status === "HIDDEN" && <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-[11px] font-semibold">hidden now</span>}
+                  {r.status === "HIDDEN" && <Badge tone="neutral">Hidden now</Badge>}
                   {r.saleReversed && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-800">sale reversed</span>}
                 </div>
                 <p className="text-[13px] leading-relaxed">{r.body}</p>

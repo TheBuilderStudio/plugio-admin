@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireWritableAdmin, getAdminEmail } from "@/lib/security";
+import { assertCapability } from "@/lib/admin-access";
 import { ValidationError } from "@/lib/validation";
 import { updateBillingPlanSettings } from "@/lib/db/queries";
 import { logAdminAction } from "@/lib/logger";
@@ -79,6 +80,7 @@ export async function updatePlanCatalogAction(input: {
 }): Promise<ActionResult> {
   try {
     const session = await requireWritableAdmin();
+    await assertCapability(session, "EDIT_PLANS");
 
     const catalog: AdminPlanCatalog = {
       currency: "USD",

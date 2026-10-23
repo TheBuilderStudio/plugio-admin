@@ -5,7 +5,9 @@ import { getGlobalPaymentAuditEvents } from "@/lib/db/queries";
 import { validatePage } from "@/lib/validation";
 import { Pagination } from "@/components/shared/Pagination";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { AdminPage, AdminCard } from "@/components/ui/page-shell";
+import { AdminPage, AdminPageHeader, AdminCard } from "@/components/ui/page-shell";
+import { Badge } from "@/components/ui/badge";
+import { statusTone, statusLabel } from "@/lib/status-tone";
 import { formatDateTime } from "@/lib/utils";
 
 interface PaymentsPageProps {
@@ -20,6 +22,8 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
 
   return (
     <AdminPage>
+      <AdminPageHeader kicker="Money" title="Subscription payments" description="Checkout and webhook events for Creator and Pro plans, newest first. Store and session payments are under Transactions." />
+
       <AdminCard padded={false}>
         {result.items.length === 0 ? (
           <EmptyState
@@ -53,9 +57,7 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
                           )}
                           <div>
                             <p className="font-semibold">{log.event_type}</p>
-                            <p className="text-[11px] font-medium uppercase tracking-wide text-(--ink-mute)">
-                              {log.status}
-                            </p>
+                            <Badge tone={statusTone(log.status)} className="mt-1">{statusLabel(log.status)}</Badge>
                           </div>
                         </div>
                       </td>
