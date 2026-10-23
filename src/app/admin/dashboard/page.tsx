@@ -145,6 +145,7 @@ export default async function DashboardPage() {
       funnel={funnel}
       revenueSeries={revenue}
       retention={retention}
+      canViewMoney={access.can("VIEW_MONEY")}
     />
   );
 }

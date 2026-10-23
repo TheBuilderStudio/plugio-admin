@@ -169,7 +169,7 @@ export function PlanCouponManager({ coupons, schemaAvailable, catalog }: PlanCou
           Create Creator / Pro code
         </h2>
         <p className="mb-4 text-[12.5px] text-(--ink-soft)">
-          Percent off that checkout total. Maximum 90% — every term still pays through Razorpay.
+          Percent off the checkout total. Maximum 90%.
         </p>
         {isReadOnly ? (
           <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-center text-[13px] font-medium text-sky-800">
@@ -299,7 +299,7 @@ export function PlanCouponManager({ coupons, schemaAvailable, catalog }: PlanCou
           <EmptyState
             icon={Ticket}
             title="No paid-plan coupons yet"
-            description="Create a Creator or Pro percent-off code. Checkout still goes through Razorpay."
+            description="Create a Creator or Pro discount code."
           />
         ) : (
           <div className="overflow-x-auto">

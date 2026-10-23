@@ -28,6 +28,7 @@ describe("parseRange and isReportName", () => {
 
   it("accepts only known report names", () => {
     assert.ok(isReportName("revenue"));
+    assert.ok(isReportName("money-by-creator"));
     assert.ok(!isReportName("../etc/passwd"));
   });
 });

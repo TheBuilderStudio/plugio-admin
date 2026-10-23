@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check } from "lucide-react";
 import { updatePlanCatalogAction } from "@/actions/plan.actions";
-import { formatInr, formatUsd, termSavePercent, PLAN_CATALOG_INR, type AdminPlanCatalog } from "@/constants";
+import { termSavePercent, PLAN_CATALOG_INR, type AdminPlanCatalog } from "@/constants";
 import { useAdminReadOnly } from "@/components/shared/AdminReadOnlyContext";
 import { trialPricePreviewLine } from "@/lib/plan-coupon-preview";
 
@@ -55,6 +55,16 @@ export function PlanCatalogEditor({ catalog }: Props) {
     String(catalog.channelsPerPlatform.CREATOR)
   );
   const [proChannels, setProChannels] = useState(String(catalog.channelsPerPlatform.PRO));
+
+  const [currency, setCurrency] = useState<"USD" | "INR">("USD");
+  const serialise = () => JSON.stringify([
+    trialDays, trialPrice, trialPriceInr, trialChannels,
+    creatorMonthly, creatorTwoMonths, creatorThreeMonths, creatorMonthlyInr, creatorTwoMonthsInr, creatorThreeMonthsInr, creatorChannels,
+    proMonthly, proTwoMonths, proThreeMonths, proMonthlyInr, proTwoMonthsInr, proThreeMonthsInr, proChannels,
+  ]);
+  // What is saved, so the Save button only lights up when something actually changed.
+  const [baseline, setBaseline] = useState(serialise);
+  const dirty = serialise() !== baseline;
 
   useEffect(() => {
     if (!result) return;
@@ -121,14 +131,41 @@ export function PlanCatalogEditor({ catalog }: Props) {
         type: res.success ? "success" : "error",
         message: res.message,
       });
-      if (res.success) router.refresh();
+      if (res.success) {
+        setBaseline(serialise());
+        router.refresh();
+      }
     });
   }
+
+  const usd = currency === "USD";
+  const rows = [
+    {
+      name: "Creator",
+      monthly: usd ? creatorMonthly : creatorMonthlyInr, onMonthly: usd ? setCreatorMonthly : setCreatorMonthlyInr,
+      two: usd ? creatorTwoMonths : creatorTwoMonthsInr, onTwo: usd ? setCreatorTwoMonths : setCreatorTwoMonthsInr,
+      three: usd ? creatorThreeMonths : creatorThreeMonthsInr, onThree: usd ? setCreatorThreeMonths : setCreatorThreeMonthsInr,
+      save2: usd ? creator2mSave : creator2mSaveInr, save3: usd ? creator3mSave : creator3mSaveInr,
+      channels: creatorChannels, onChannels: setCreatorChannels,
+    },
+    {
+      name: "Pro",
+      monthly: usd ? proMonthly : proMonthlyInr, onMonthly: usd ? setProMonthly : setProMonthlyInr,
+      two: usd ? proTwoMonths : proTwoMonthsInr, onTwo: usd ? setProTwoMonths : setProTwoMonthsInr,
+      three: usd ? proThreeMonths : proThreeMonthsInr, onThree: usd ? setProThreeMonths : setProThreeMonthsInr,
+      save2: usd ? pro2mSave : pro2mSaveInr, save3: usd ? pro3mSave : pro3mSaveInr,
+      channels: proChannels, onChannels: setProChannels,
+    },
+  ];
+  const step = usd ? "0.01" : "1";
+  const min = usd ? 0.5 : 1;
+  const symbol = usd ? "$" : "₹";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {result ? (
         <div
+          role="status"
           className={`rounded-2xl border px-4 py-3 text-[13px] font-medium ${
             result.type === "success"
               ? "border-emerald-200 bg-emerald-50 text-emerald-800"
@@ -140,239 +177,135 @@ export function PlanCatalogEditor({ catalog }: Props) {
       ) : null}
 
       <section className="admin-card p-5 sm:p-6">
-        <h2 className="mb-1 text-[15px] font-semibold tracking-tight text-(--ink)">
-          Trial
-        </h2>
-        <p className="mb-4 text-[12.5px] text-(--ink-soft)">
-          List price and days. Invite coupons (Coupons desk, max 90%) compute off this list — not a
-          hardcoded $0.70 or ₹59.90. INR is an explicit catalog, not FX from USD.
-        </p>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <NumberField
-            label="Days"
-            value={trialDays}
-            onChange={setTrialDays}
-            min={1}
-            max={30}
-            step="1"
-            disabled={isReadOnly}
-          />
-          <NumberField
-            label="List price (USD)"
-            value={trialPrice}
-            onChange={setTrialPrice}
-            min={0.5}
-            step="0.01"
-            disabled={isReadOnly}
-          />
-          <NumberField
-            label="List price (INR)"
-            value={trialPriceInr}
-            onChange={setTrialPriceInr}
-            min={1}
-            step="1"
-            disabled={isReadOnly}
-          />
-          <NumberField
-            label="Channels per platform"
-            value={trialChannels}
-            onChange={setTrialChannels}
-            min={1}
-            max={10}
-            step="1"
-            disabled={isReadOnly}
-          />
+        <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Trial</h2>
+        <p className="mb-4 text-[12.5px] text-(--ink-soft)">Coupons take their discount off this price.</p>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <NumberField label="Days" value={trialDays} onChange={setTrialDays} min={1} max={30} step="1" disabled={isReadOnly} />
+          <NumberField label="Price (USD)" value={trialPrice} onChange={setTrialPrice} min={0.5} step="0.01" disabled={isReadOnly} />
+          <NumberField label="Price (INR)" value={trialPriceInr} onChange={setTrialPriceInr} min={1} step="1" disabled={isReadOnly} />
+          <NumberField label="Channels" value={trialChannels} onChange={setTrialChannels} min={1} max={10} step="1" disabled={isReadOnly} />
         </div>
-        {invitePreview ? (
-          <p className="mt-3 text-[12.5px] font-medium text-(--ink-soft)">
-            Typical 90% invite: {invitePreview}
-          </p>
-        ) : null}
+        {invitePreview ? <p className="mt-3 text-[12.5px] font-medium text-(--ink-soft)">With a 90% invite: {invitePreview}</p> : null}
       </section>
 
-      <p className="text-[12.5px] font-semibold uppercase tracking-[0.08em] text-(--ink-mute)">
-        International (USD)
-      </p>
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <PlanPriceCard
-          title="Creator"
-          currency="USD"
-          monthly={creatorMonthly}
-          twoMonths={creatorTwoMonths}
-          threeMonths={creatorThreeMonths}
-          channels={creatorChannels}
-          save2m={creator2mSave}
-          save3m={creator3mSave}
-          disabled={isReadOnly}
-          formatMoney={formatUsd}
-          onMonthly={setCreatorMonthly}
-          onTwoMonths={setCreatorTwoMonths}
-          onThreeMonths={setCreatorThreeMonths}
-          onChannels={setCreatorChannels}
-        />
-        <PlanPriceCard
-          title="Pro"
-          currency="USD"
-          monthly={proMonthly}
-          twoMonths={proTwoMonths}
-          threeMonths={proThreeMonths}
-          channels={proChannels}
-          save2m={pro2mSave}
-          save3m={pro3mSave}
-          disabled={isReadOnly}
-          formatMoney={formatUsd}
-          onMonthly={setProMonthly}
-          onTwoMonths={setProTwoMonths}
-          onThreeMonths={setProThreeMonths}
-          onChannels={setProChannels}
-        />
-      </div>
-
-      <p className="text-[12.5px] font-semibold uppercase tracking-[0.08em] text-(--ink-mute)">
-        India (INR)
-      </p>
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <PlanPriceCard
-          title="Creator"
-          currency="INR"
-          monthly={creatorMonthlyInr}
-          twoMonths={creatorTwoMonthsInr}
-          threeMonths={creatorThreeMonthsInr}
-          save2m={creator2mSaveInr}
-          save3m={creator3mSaveInr}
-          disabled={isReadOnly}
-          formatMoney={formatInr}
-          min={1}
-          step="1"
-          onMonthly={setCreatorMonthlyInr}
-          onTwoMonths={setCreatorTwoMonthsInr}
-          onThreeMonths={setCreatorThreeMonthsInr}
-        />
-        <PlanPriceCard
-          title="Pro"
-          currency="INR"
-          monthly={proMonthlyInr}
-          twoMonths={proTwoMonthsInr}
-          threeMonths={proThreeMonthsInr}
-          save2m={pro2mSaveInr}
-          save3m={pro3mSaveInr}
-          disabled={isReadOnly}
-          formatMoney={formatInr}
-          min={1}
-          step="1"
-          onMonthly={setProMonthlyInr}
-          onTwoMonths={setProTwoMonthsInr}
-          onThreeMonths={setProThreeMonthsInr}
-        />
-      </div>
+      <section className="admin-card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-(--line) px-5 py-4">
+          <div>
+            <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Paid plans</h2>
+            <p className="text-[12.5px] text-(--ink-soft)">The “Save %” badge on the landing page comes from the longer terms.</p>
+          </div>
+          <div role="group" aria-label="Currency" className="flex gap-1 rounded-xl bg-[#F4F1EC] p-1">
+            {([["USD", "International (USD)"], ["INR", "India (INR)"]] as const).map(([c, label]) => (
+              <button
+                key={c}
+                type="button"
+                aria-pressed={currency === c}
+                onClick={() => setCurrency(c)}
+                className={`rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition ${currency === c ? "bg-white text-(--ink) shadow-xs" : "text-(--ink-soft) hover:text-(--ink)"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Plan</th>
+                <th>Monthly</th>
+                <th>2 months</th>
+                <th>3 months</th>
+                <th>Channels</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.name}>
+                  <td className="align-middle text-[14px] font-semibold">{r.name}</td>
+                  <td><PriceCell label={`${r.name} monthly (${currency})`} symbol={symbol} value={r.monthly} onChange={r.onMonthly} min={min} step={step} disabled={isReadOnly} /></td>
+                  <td>
+                    <PriceCell label={`${r.name} 2 months (${currency})`} symbol={symbol} value={r.two} onChange={r.onTwo} min={min} step={step} disabled={isReadOnly} />
+                    <SaveNote percent={r.save2} />
+                  </td>
+                  <td>
+                    <PriceCell label={`${r.name} 3 months (${currency})`} symbol={symbol} value={r.three} onChange={r.onThree} min={min} step={step} disabled={isReadOnly} />
+                    <SaveNote percent={r.save3} />
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      aria-label={`${r.name} channels per platform`}
+                      value={r.channels}
+                      onChange={(e) => r.onChannels(e.target.value)}
+                      min={1}
+                      max={10}
+                      step="1"
+                      required
+                      disabled={isReadOnly}
+                      className="admin-input w-20"
+                    />
+                    <p className="mt-1 text-[11px] text-(--ink-mute)">per platform</p>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {isReadOnly ? (
         <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-center text-[13px] font-medium text-sky-800">
           Read-only mode — plan writes are blocked.
         </div>
       ) : (
-        <button
-          type="submit"
-          disabled={isPending}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 text-[13px] font-bold text-white disabled:opacity-60"
-        >
-          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          Save catalog
-        </button>
+        <div className="sticky bottom-4 z-10 flex items-center justify-between gap-3 rounded-2xl border border-(--line-strong) bg-(--paper) px-4 py-3 shadow-lg">
+          <p className={`flex items-center gap-1.5 text-[12.5px] font-medium ${dirty ? "text-amber-800" : "text-(--ink-mute)"}`}>
+            {dirty ? <span aria-hidden className="h-2 w-2 rounded-full bg-amber-500" /> : <Check className="h-3.5 w-3.5" />}
+            {dirty ? "Unsaved changes" : "All changes saved"}
+          </p>
+          <button
+            type="submit"
+            disabled={isPending || !dirty}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 text-[13px] font-bold text-white transition disabled:opacity-40"
+          >
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Save catalog
+          </button>
+        </div>
       )}
     </form>
   );
 }
 
-function PlanPriceCard({
-  title,
-  currency,
-  monthly,
-  twoMonths,
-  threeMonths,
-  channels,
-  save2m,
-  save3m,
-  disabled,
-  formatMoney,
-  min = 0.5,
-  step = "0.01",
-  onMonthly,
-  onTwoMonths,
-  onThreeMonths,
-  onChannels,
-}: {
-  title: string;
-  currency: "USD" | "INR";
-  monthly: string;
-  twoMonths: string;
-  threeMonths: string;
-  channels?: string;
-  save2m: number | null;
-  save3m: number | null;
-  disabled: boolean;
-  formatMoney: (amount: number) => string;
-  min?: number;
-  step?: string;
-  onMonthly: (v: string) => void;
-  onTwoMonths: (v: string) => void;
-  onThreeMonths: (v: string) => void;
-  onChannels?: (v: string) => void;
+function PriceCell({ label, symbol, value, onChange, min, step, disabled }: {
+  label: string; symbol: string; value: string; onChange: (v: string) => void; min: number; step: string; disabled: boolean;
 }) {
-  const monthlyN = Number(monthly);
-  const was2 = Number.isFinite(monthlyN) ? monthlyN * 2 : null;
-  const was3 = Number.isFinite(monthlyN) ? monthlyN * 3 : null;
-
   return (
-    <section className="admin-card p-5 sm:p-6">
-      <h2 className="mb-1 text-[15px] font-semibold tracking-tight text-(--ink)">{title}</h2>
-      <p className="mb-4 text-[12.5px] text-(--ink-soft)">
-        Landing “Save X%” is {was2 != null ? `2 months vs ${formatMoney(was2)}` : "2 months vs monthly × 2"}{" "}
-        and {was3 != null ? `3 months vs ${formatMoney(was3)}` : "3 months vs monthly × 3"}. It is not a
-        fixed amount.
-      </p>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <NumberField
-          label={`Monthly (${currency})`}
-          value={monthly}
-          onChange={onMonthly}
-          min={min}
-          step={step}
-          disabled={disabled}
-        />
-        {channels != null && onChannels ? (
-          <NumberField
-            label="Channels per platform"
-            value={channels}
-            onChange={onChannels}
-            min={1}
-            max={10}
-            step="1"
-            disabled={disabled}
-          />
-        ) : (
-          <div />
-        )}
-        <NumberField
-          label={`2 months (${currency})`}
-          value={twoMonths}
-          onChange={onTwoMonths}
-          min={min}
-          step={step}
-          disabled={disabled}
-          hint={save2m != null ? `Landing shows Save ${save2m}%` : "No save badge (not cheaper than monthly × 2)"}
-        />
-        <NumberField
-          label={`3 months (${currency})`}
-          value={threeMonths}
-          onChange={onThreeMonths}
-          min={min}
-          step={step}
-          disabled={disabled}
-          hint={save3m != null ? `Landing shows Save ${save3m}%` : "No save badge (not cheaper than monthly × 3)"}
-        />
-      </div>
-    </section>
+    <div className="relative w-32">
+      <span aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-(--ink-mute)">{symbol}</span>
+      <input
+        type="number"
+        inputMode="decimal"
+        aria-label={label}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        min={min}
+        step={step}
+        required
+        disabled={disabled}
+        className="admin-input pl-7"
+      />
+    </div>
+  );
+}
+
+function SaveNote({ percent }: { percent: number | null }) {
+  return percent != null ? (
+    <p className="mt-1 text-[11px] font-semibold text-emerald-700">Save {percent}%</p>
+  ) : (
+    <p className="mt-1 text-[11px] text-(--ink-mute)">No save badge</p>
   );
 }
 

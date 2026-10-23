@@ -1,6 +1,8 @@
 import "server-only";
 
 import { cache } from "react";
+import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/security";
 import type { Session } from "next-auth";
 import { ADMIN_EMAILS } from "@/constants";
 import { adminUsersApi } from "@/lib/store-api";
@@ -26,6 +28,17 @@ export const getAdminAccess = cache(async (session: Session): Promise<AdminAcces
 });
 
 export class CapabilityError extends Error {}
+
+/**
+ * For pages: a signed-in admin whose role lacks the capability is sent to the unauthorized page, so a hidden menu item
+ * is never the only thing keeping a page closed. Server actions use {@link assertCapability} instead.
+ */
+export async function requireCapability(capability: Capability): Promise<Session> {
+  const session = await requireAdmin();
+  const access = await getAdminAccess(session);
+  if (!access.can(capability)) redirect("/unauthorized");
+  return session;
+}
 
 export async function assertCapability(session: Session, capability: Capability): Promise<void> {
   const access = await getAdminAccess(session);

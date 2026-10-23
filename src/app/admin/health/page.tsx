@@ -48,9 +48,9 @@ export default async function HealthPage() {
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="System"
+        kicker="Platform"
         title="Platform health"
-        description="What is broken for creators right now. Each row links to the creator so you can reach out before they write to you."
+        description="What is broken for creators now." hint="Each row links to the creator, so you can reach out before they write to you."
       />
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -71,7 +71,7 @@ export default async function HealthPage() {
       </div>
 
       {alerts && alerts.length > 0 ? (
-        <AdminPanel title="Open alerts" subtitle="Raised by the alert scheduler and emailed to admins. They close themselves when the problem is gone.">
+        <AdminPanel title="Open alerts" subtitle="Emailed to admins. They close when the problem is gone.">
           <ul className="divide-y divide-(--line)">
             {alerts.map((a) => (
               <li key={`${a.rule}-${a.since.getTime()}`} className="flex items-start justify-between gap-4 px-5 py-3">
@@ -100,15 +100,14 @@ export default async function HealthPage() {
         <div className="admin-card flex items-center gap-3 p-5">
           <CheckCircle2 className="h-5 w-5 text-emerald-600" />
           <p className="text-[13.5px] text-(--ink)">
-            No failed publishes, social sync errors or payment failures in the recent window.
+            All clear. No recent failures.
           </p>
         </div>
       ) : (
         <>
           {health.stuckPublishing > 0 && (
             <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-medium text-amber-950">
-              {health.stuckPublishing} post{health.stuckPublishing === 1 ? " has" : "s have"} been uploading for over 2
-              hours. The publish job may be stuck.
+              {health.stuckPublishing} post{health.stuckPublishing === 1 ? "" : "s"} uploading for over 2 hours. The publish job may be stuck.
             </div>
           )}
 
@@ -126,7 +125,7 @@ export default async function HealthPage() {
             />
           </AdminPanel>
 
-          <AdminPanel title="Social accounts failing to sync" subtitle="Connected accounts whose last analytics sync failed">
+          <AdminPanel title="Social accounts failing to sync" subtitle="Last analytics sync failed">
             <FailureList
               empty="All connected accounts are syncing."
               rows={health.failingSyncs.map((r) => ({

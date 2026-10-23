@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { Receipt, CheckCircle2, XCircle } from "lucide-react";
-import { requireAdmin } from "@/lib/security";
+import { requireCapability } from "@/lib/admin-access";
 import { getGlobalPaymentAuditEvents } from "@/lib/db/queries";
 import { validatePage } from "@/lib/validation";
 import { Pagination } from "@/components/shared/Pagination";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { AdminPage, AdminPageHeader, AdminCard } from "@/components/ui/page-shell";
+import { ListToolbar, resultSummary } from "@/components/shared/ListToolbar";
 import { Badge } from "@/components/ui/badge";
 import { statusTone, statusLabel } from "@/lib/status-tone";
 import { formatDateTime } from "@/lib/utils";
@@ -15,21 +16,22 @@ interface PaymentsPageProps {
 }
 
 export default async function PaymentsPage({ searchParams }: PaymentsPageProps) {
-  await requireAdmin();
+  await requireCapability("VIEW_MONEY");
   const params = await searchParams;
   const page = validatePage(params.page);
   const result = await getGlobalPaymentAuditEvents(page, 50);
 
   return (
     <AdminPage>
-      <AdminPageHeader kicker="Money" title="Subscription payments" description="Checkout and webhook events for Creator and Pro plans, newest first. Store and session payments are under Transactions." />
+      <AdminPageHeader kicker="Money" title="Subscription payments" description="Plan checkout and webhook events." hint="Newest first. Store and session payments are under Transactions." />
 
       <AdminCard padded={false}>
+        <ListToolbar summary={resultSummary(result.page, result.pageSize, result.total, result.items.length)} />
         {result.items.length === 0 ? (
           <EmptyState
             icon={Receipt}
             title="No payments recorded"
-            description="Events appear here when checkout or webhooks complete."
+            description="Plan checkouts will appear here."
           />
         ) : (
           <>

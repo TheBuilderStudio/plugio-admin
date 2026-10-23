@@ -2,7 +2,8 @@ import { Star } from "lucide-react";
 import { requireAdmin } from "@/lib/security";
 import { reviewApi } from "@/lib/store-api";
 import { validatePage } from "@/lib/validation";
-import { AdminPage, AdminPageHeader, AdminCard, FilterPills } from "@/components/ui/page-shell";
+import { AdminPage, AdminPageHeader, AdminCard } from "@/components/ui/page-shell";
+import { ListToolbar, resultSummary } from "@/components/shared/ListToolbar";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pagination } from "@/components/shared/Pagination";
@@ -46,15 +47,17 @@ export default async function ReviewsAdminPage({ searchParams }: ReviewsPageProp
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="Trust"
+        kicker="Marketplace"
         title="Review moderation"
-        description="Creators cannot hide reviews. They report one, and you decide: keep it public or remove it with a reason the creator sees. Reviews creators hid before this rule existed wait here too, still hidden."
+        description="Reported reviews waiting for you." hint="Creators cannot hide reviews. They report one, and you keep it or remove it with a reason the creator sees. Reviews hidden before this rule wait here too."
       />
-      <FilterPills items={STATES.map((s) => ({ href: `/admin/reviews?state=${s.id}`, label: s.label, active: state === s.id }))} />
-
       <AdminCard padded={false}>
+        <ListToolbar
+          pills={STATES.map((s) => ({ href: `/admin/reviews?state=${s.id}`, label: s.label, active: state === s.id }))}
+          summary={resultSummary(result.page + 1, 25, result.total, result.rows.length)}
+        />
         {result.rows.length === 0 ? (
-          <EmptyState icon={Star} title="Nothing here" description="Reported reviews appear in this queue." />
+          <EmptyState icon={Star} title={state === "REPORTED" ? "Queue is clear" : "Nothing here"} description={state === "REPORTED" ? "No reviews waiting for a decision." : "Nothing in this list yet."} />
         ) : (
           <div className="divide-y divide-(--line)">
             {result.rows.map((r) => (

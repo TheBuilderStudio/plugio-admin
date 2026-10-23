@@ -1,15 +1,16 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Inbox, Search } from "lucide-react";
+import { Inbox } from "lucide-react";
 import { requireAdmin } from "@/lib/security";
 import { getInquiryStats, listInquiries } from "@/lib/db/marketplace";
 import { validatePage, validateSearch } from "@/lib/validation";
-import { AdminPage, AdminPageHeader, AdminCard, FilterPills, KpiTile } from "@/components/ui/page-shell";
+import { AdminPage, AdminPageHeader, AdminCard, KpiTile } from "@/components/ui/page-shell";
 import { SavedViews } from "@/components/shared/SavedViews";
+import { ListToolbar, resultSummary } from "@/components/shared/ListToolbar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pagination } from "@/components/shared/Pagination";
 import { Badge } from "@/components/ui/badge";
-import { formatRelativeTime } from "@/lib/utils";
+import { formatRelativeTime, getInitials } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -30,9 +31,9 @@ export default async function InquiriesPage({ searchParams }: Props) {
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="Marketplace"
+        kicker="People"
         title="Brand inquiries"
-        description="Messages brands send to creators from portfolio pages. Unread ones are creators missing deals; useful for spotting spam and for nudging creators."
+        description="Messages brands sent to creators." hint="Unread ones are creators missing deals. Useful for spotting spam and for nudging creators."
       />
       <Suspense fallback={null}>
         <SavedViews pageKey="inquiries" />
@@ -40,53 +41,53 @@ export default async function InquiriesPage({ searchParams }: Props) {
       <div className="grid grid-cols-3 gap-3">
         <KpiTile label="All time" value={stats.total.toLocaleString()} />
         <KpiTile label="Last 7 days" value={stats.last7d.toLocaleString()} />
-        <KpiTile label="Unread by creators" value={stats.unread.toLocaleString()} tone={stats.unread > 0 ? "alert" : "default"} />
+        <KpiTile label="Unread" value={stats.unread.toLocaleString()} tone={stats.unread > 0 ? "alert" : "default"} />
       </div>
 
       <AdminCard padded={false}>
-        <div className="flex flex-col gap-3 border-b border-(--line) px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <FilterPills
-            items={[
-              { href: "/admin/inquiries", label: "All", active: !unreadOnly },
-              { href: "/admin/inquiries?view=unread", label: "Unread", active: unreadOnly },
-            ]}
-          />
-          <form method="get" className="relative sm:w-[260px]">
-            {unreadOnly && <input type="hidden" name="view" value="unread" />}
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-(--ink-mute)" />
-            <input type="search" name="search" defaultValue={search} placeholder="Brand, sender or creator" maxLength={100} className="admin-input py-2 pl-9 pr-3" />
-          </form>
-        </div>
+        <ListToolbar
+          pills={[
+            { href: "/admin/inquiries", label: "All", active: !unreadOnly, count: stats.total },
+            { href: "/admin/inquiries?view=unread", label: "Unread", active: unreadOnly, count: stats.unread },
+          ]}
+          search={{ placeholder: "Search brand, sender or creator", value: search, hidden: unreadOnly ? { view: "unread" } : undefined }}
+          summary={resultSummary(page, result.pageSize, result.total, result.items.length)}
+          clearHref={search || unreadOnly ? "/admin/inquiries" : undefined}
+        />
         {result.items.length === 0 ? (
           <EmptyState
             icon={Inbox}
-            title="No inquiries"
-            description={unreadOnly ? "Every inquiry has been read." : "Nothing matches this view."}
+            title={unreadOnly ? "All caught up" : "No inquiries"}
+            description={unreadOnly ? "Every inquiry has been read." : search ? `Nothing matched “${search}”.` : "Brands have not written yet."}
             action={search || unreadOnly ? { label: "Show all inquiries", href: "/admin/inquiries" } : undefined}
           />
         ) : (
           <ul className="divide-y divide-(--line)">
             {result.items.map((i) => (
-              <li key={i.id} className="px-5 py-3.5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[13.5px] font-semibold text-(--ink)">
+              <li key={i.id} className="flex gap-3 px-5 py-3.5 transition-colors hover:bg-[#FAF7F2]">
+                <div className="relative mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-500/10 text-[12px] font-bold text-brand-500" aria-hidden>
+                  {getInitials(i.sender_name)}
+                  {!i.read && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="min-w-0 truncate text-[13.5px] font-semibold text-(--ink)">
                       {i.sender_name}
                       {i.brand ? <span className="font-normal text-(--ink-soft)"> · {i.brand}</span> : null}
                     </p>
-                    <p className="text-[12px] text-(--ink-mute)">
-                      {i.sender_email} to{" "}
-                      <Link href={`/admin/users/${i.creator_id}`} className="font-medium text-brand-500 hover:underline">
-                        {i.creator_name ?? i.creator_email}
-                      </Link>
-                    </p>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {!i.read && <Badge tone="warning">Unread</Badge>}
+                      <span className="text-[11.5px] text-(--ink-mute)">{formatRelativeTime(i.created_at)}</span>
+                    </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {!i.read && <Badge tone="warning">Unread</Badge>}
-                    <span className="text-[11.5px] text-(--ink-mute)">{formatRelativeTime(i.created_at)}</span>
-                  </div>
+                  <p className="text-[12px] text-(--ink-mute)">
+                    {i.sender_email} → {" "}
+                    <Link href={`/admin/users/${i.creator_id}`} className="font-medium text-brand-500 hover:underline">
+                      {i.creator_name ?? i.creator_email}
+                    </Link>
+                  </p>
+                  <p className="mt-1 line-clamp-2 text-[13px] text-(--ink-soft)">{i.message}</p>
                 </div>
-                <p className="mt-1.5 line-clamp-2 text-[13px] text-(--ink-soft)">{i.message}</p>
               </li>
             ))}
           </ul>

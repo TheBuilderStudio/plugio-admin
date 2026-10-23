@@ -4,6 +4,7 @@ import { readRecentAuditLogs } from "@/lib/logger";
 import { formatDateTime } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { AdminPage, AdminPageHeader, AdminCard } from "@/components/ui/page-shell";
+import { ListToolbar } from "@/components/shared/ListToolbar";
 
 interface AuditPageProps {
   searchParams: Promise<{ q?: string; action?: string }>;
@@ -31,41 +32,36 @@ export default async function AuditLogsPage({ searchParams }: AuditPageProps) {
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="System"
+        kicker="Audit & logs"
         title="Audit trail"
-        description="Who did what in this admin panel: approvals, coupon and price changes, payouts, refunds and admin changes."
+        description="Who did what in this panel." hint="Approvals, coupon and price changes, payouts, refunds and admin changes."
       />
 
-      <form method="get" className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-(--ink-mute)" />
-          <input
-            type="search"
-            name="q"
-            defaultValue={q}
-            placeholder="Admin, creator email or detail"
-            className="admin-input py-2 pl-9 pr-3"
-          />
-        </div>
-        <select name="action" defaultValue={action} className="admin-input w-auto py-2" aria-label="Action">
-          <option value="">All actions</option>
-          {actions.map((a) => (
-            <option key={a} value={a}>
-              {a.replaceAll("_", " ").toLowerCase()}
-            </option>
-          ))}
-        </select>
-        <button type="submit" className="rounded-lg bg-(--ink) px-3.5 py-2 text-[13px] font-semibold text-white">
-          Filter
-        </button>
-      </form>
-
       <AdminCard padded={false}>
+        <ListToolbar
+          actions={
+            <form method="get" className="flex flex-wrap items-center gap-2">
+              <div className="relative min-w-[220px]">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-(--ink-mute)" />
+                <input type="search" name="q" defaultValue={q} placeholder="Search admin, creator or detail" aria-label="Search audit events" className="admin-input py-2 pl-9 pr-3" />
+              </div>
+              <select name="action" defaultValue={action} className="admin-input w-auto py-2" aria-label="Action">
+                <option value="">All actions</option>
+                {actions.map((a) => (
+                  <option key={a} value={a}>{a.replaceAll("_", " ").toLowerCase()}</option>
+                ))}
+              </select>
+              <button type="submit" className="rounded-lg bg-(--ink) px-3.5 py-2 text-[13px] font-semibold text-white">Filter</button>
+            </form>
+          }
+          summary={`${logs.length} event${logs.length === 1 ? "" : "s"}${all.length > logs.length && !q && !action ? ` (latest of ${all.length})` : ""}`}
+          clearHref={q || action ? "/admin/audit" : undefined}
+        />
         {logs.length === 0 ? (
           <EmptyState
             icon={Shield}
             title="No matching events"
-            description="Approvals, coupon writes, payouts and other admin actions appear here automatically."
+            description="Admin actions appear here automatically."
           />
         ) : (
           <div className="overflow-x-auto">

@@ -53,17 +53,18 @@ async function run(
 
 const RATE_PATTERN = /^\d{1,2}(\.\d{1,2})?$/;
 const MAX_RATE = 50;
+const MAX_GATEWAY_RATE = 10;
 
-function parseRate(label: string, raw: string): { value: number } | { error: string } {
+function parseRate(label: string, raw: string, max = MAX_RATE): { value: number } | { error: string } {
   const text = raw.trim();
   if (!RATE_PATTERN.test(text)) return { error: `${label} must be a number with at most 2 decimal places.` };
   const value = Number(text);
-  if (!Number.isFinite(value) || value < 0 || value > MAX_RATE) return { error: `${label} must be between 0% and ${MAX_RATE}%.` };
+  if (!Number.isFinite(value) || value < 0 || value > max) return { error: `${label} must be between 0% and ${max}%.` };
   return { value };
 }
 
-/** Saves both commission rates. The server re-validates, checks the version and writes the audit trail. */
-export async function updateCommissionPolicyAction(digital: string, bookings: string, version: number): Promise<ActionResult> {
+/** Saves the commission rates and the payment gateway charge. The server re-validates, checks the version and writes the audit trail. */
+export async function updateCommissionPolicyAction(digital: string, bookings: string, gateway: string, version: number): Promise<ActionResult> {
   try {
     const session = await requireWritableAdmin();
     const adminEmail = session.user?.email;
@@ -72,17 +73,20 @@ export async function updateCommissionPolicyAction(digital: string, bookings: st
     if ("error" in d) return { success: false, message: d.error };
     const b = parseRate("Bookings fee", bookings);
     if ("error" in b) return { success: false, message: b.error };
+    const g = parseRate("Payment gateway fee", gateway, MAX_GATEWAY_RATE);
+    if ("error" in g) return { success: false, message: g.error };
     if (!Number.isInteger(version) || version < 0) return { success: false, message: "Reload the page and try again." };
 
     const saved = await storeApi.updateCommissionPolicy(adminEmail, {
       digitalProductsFeePercent: d.value,
       bookingsFeePercent: b.value,
+      gatewayFeePercent: g.value,
       version,
     });
     logAdminAction({
       action: "STORE_COMMISSION_UPDATE",
       adminEmail,
-      details: `digital=${saved.digitalProductsFeePercent}% bookings=${saved.bookingsFeePercent}% v${saved.version}`,
+      details: `digital=${saved.digitalProductsFeePercent}% bookings=${saved.bookingsFeePercent}% gateway=${saved.gatewayFeePercent ?? 0}% v${saved.version}`,
     });
     revalidatePath("/admin/store");
     return { success: true, message: "Commission policy saved. It applies to new checkouts from now on." };

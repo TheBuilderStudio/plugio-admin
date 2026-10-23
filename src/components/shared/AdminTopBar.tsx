@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ClipboardList, Menu, Search } from "lucide-react";
 import { useDbContext } from "@/components/shared/DatabaseSwitch";
-import { titleFor } from "@/components/shared/nav-config";
+import { sectorFor, titleFor } from "@/components/shared/nav-config";
 import { cn } from "@/lib/utils";
 
 interface AdminTopBarProps {
@@ -30,7 +30,15 @@ export function AdminTopBar({ isReadOnly = false, pendingBeta = 0, onOpenMenu, o
         <Menu className="h-5 w-5" />
       </button>
 
-      <p className="min-w-0 flex-1 truncate text-[16px] font-semibold tracking-tight text-(--ink)">{titleFor(pathname)}</p>
+      <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-1.5 truncate">
+        {sectorFor(pathname) && (
+          <>
+            <span className="hidden text-[13px] font-medium text-(--ink-mute) sm:inline">{sectorFor(pathname)}</span>
+            <span aria-hidden className="hidden text-(--ink-mute) sm:inline">/</span>
+          </>
+        )}
+        <p className="truncate text-[16px] font-semibold tracking-tight text-(--ink)">{titleFor(pathname)}</p>
+      </nav>
 
       <button
         type="button"

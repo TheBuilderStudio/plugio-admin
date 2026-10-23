@@ -9,7 +9,7 @@ export function FunnelPanel({ steps }: { steps: FunnelStep[] }) {
     <AdminCard padded={false}>
       <div className="border-b border-(--line) px-5 py-3">
         <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">From sign-in to paying</h2>
-        <p className="text-[12.5px] text-(--ink-soft)">Everyone so far. The percentage is the share of the step before it.</p>
+        <p className="text-[12.5px] text-(--ink-soft)">Share of the step before it.</p>
       </div>
       <ol className="divide-y divide-(--line)">
         {steps.map((s, i) => {
@@ -53,7 +53,7 @@ export function RevenuePanel({ series }: { series: RevenueSeries[] }) {
     <AdminCard padded={false}>
       <div className="border-b border-(--line) px-5 py-3">
         <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Subscription revenue, last 30 days</h2>
-        <p className="text-[12.5px] text-(--ink-soft)">Paid checkouts by day, in each currency. Currencies are never added together.</p>
+        <p className="text-[12.5px] text-(--ink-soft)">Paid checkouts by day, per currency.</p>
       </div>
       {series.length === 0 ? (
         <p className="px-5 py-8 text-center text-[13px] text-(--ink-mute)">No paid checkouts in the last 30 days.</p>
@@ -110,7 +110,7 @@ export function RetentionPanel({ r }: { r: Retention }) {
     <AdminCard padded={false}>
       <div className="border-b border-(--line) px-5 py-3">
         <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Keeping creators</h2>
-        <p className="text-[12.5px] text-(--ink-soft)">Who pays, who is about to decide, who left.</p>
+        <p className="text-[12.5px] text-(--ink-soft)">Who pays, who decides soon, who left.</p>
       </div>
       <div className="grid grid-cols-2 gap-px bg-(--line) lg:grid-cols-4">
         {cells.map((c) => {

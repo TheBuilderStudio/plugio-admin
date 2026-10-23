@@ -44,9 +44,7 @@ export function PayoutSettingsForm({
       <div>
         <h3 className="text-[14px] font-semibold text-(--ink)">Payout rules</h3>
         <p className="mt-1 text-[12.5px] text-(--ink-soft)">
-          Creators can withdraw any amount from the minimum up to their available balance. Whatever the minimum, a creator
-          may withdraw their <strong>whole</strong> available balance once it reaches ₹{floorRupees}. Balances under
-          ₹{floorRupees} are added to the next withdrawal.
+          Creators can always withdraw their <strong>whole</strong> balance once it reaches ₹{floorRupees}. Smaller balances roll into the next withdrawal.
         </p>
       </div>
       <label className="block space-y-1.5">
@@ -58,7 +56,7 @@ export function PayoutSettingsForm({
           onChange={(e) => setValue(e.target.value)}
           aria-label="Minimum payout in rupees"
         />
-        <span className="block text-[11.5px] text-(--ink-mute)">Whole rupees, between ₹{floorRupees} and ₹50,000. Applies to new requests at once.</span>
+        <span className="block text-[11.5px] text-(--ink-mute)">Whole rupees, ₹{floorRupees} to ₹50,000. Applies at once.</span>
       </label>
       <div className="flex flex-wrap items-center gap-3">
         <button

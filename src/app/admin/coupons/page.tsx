@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/security";
+import { requireCapability } from "@/lib/admin-access";
 import {
   listPlanCoupons,
   listRecentCouponRedemptions,
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CouponsPage() {
-  await requireAdmin();
+  await requireCapability("VIEW_MONEY");
 
   let trialCoupons: Awaited<ReturnType<typeof listTrialCoupons>> = [];
   let planCoupons: Awaited<ReturnType<typeof listPlanCoupons>> = [];
@@ -39,15 +39,15 @@ export default async function CouponsPage() {
     const code = typeof error === "object" && error && "code" in error ? String((error as { code?: string }).code) : "";
     loadError =
       code === "ER_NO_SUCH_TABLE"
-        ? "The trial_coupons table is not available yet. Apply backend migration V31."
+        ? "Coupons are not set up yet. Apply migration V31."
         : code === "ER_BAD_FIELD_ERROR"
-          ? "Trial coupons need backend migration V42 (percent off and expiry)."
+          ? "Coupons need migration V42 (percent off and expiry)."
           : "Failed to load coupons. Check database connectivity.";
   }
 
   return (
     <AdminPage>
-      <AdminPageHeader kicker="Money" title="Coupons" description="Trial coupons start a trial; plan coupons take a percentage off a paid plan." />
+      <AdminPageHeader kicker="Pricing" title="Coupons" description="Trial and plan discount codes." hint="Trial coupons start a trial. Plan coupons take a percentage off a paid plan." />
 
       {loadError ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-medium text-amber-950">

@@ -38,7 +38,7 @@ export function parseRange(raw: Raw): { from?: string; to?: string } {
   return { from, to };
 }
 
-export const REPORT_NAMES = ["transactions", "revenue", "commission", "payouts"] as const;
+export const REPORT_NAMES = ["transactions", "revenue", "commission", "payouts", "money-by-creator"] as const;
 export type ReportName = (typeof REPORT_NAMES)[number];
 
 export function isReportName(v: string): v is ReportName {

@@ -1,15 +1,16 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { ClipboardList, Search, Instagram, Youtube, Facebook, Download } from "lucide-react";
+import { ClipboardList, Instagram, Youtube, Facebook, Download } from "lucide-react";
 import { requireAdmin } from "@/lib/security";
 import { getBetaRequests } from "@/lib/db/queries";
 import { validateSearch, validatePage, validateStatusFilter } from "@/lib/validation";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Pagination } from "@/components/shared/Pagination";
 import { SavedViews } from "@/components/shared/SavedViews";
+import { ListToolbar, resultSummary } from "@/components/shared/ListToolbar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { BetaActions } from "@/components/beta/BetaActions";
-import { AdminPage, AdminPageHeader, AdminCard, FilterPills } from "@/components/ui/page-shell";
+import { AdminPage, AdminPageHeader, AdminCard } from "@/components/ui/page-shell";
 import { formatRelativeTime, formatFollowers, getInitials } from "@/lib/utils";
 
 interface BetaPageProps {
@@ -41,46 +42,30 @@ export default async function BetaPage({ searchParams }: BetaPageProps) {
 
   return (
     <AdminPage>
-      <AdminPageHeader kicker="Work" title="Access requests" description="People who applied for access. Approving gives access only; it does not grant a paid plan." />
+      <AdminPageHeader kicker="People" title="Access requests" description="People who asked for access." hint="Approving gives access only. It does not grant a paid plan." />
       <Suspense fallback={null}>
         <SavedViews pageKey="access-requests" />
       </Suspense>
 
       <AdminCard padded={false}>
-        <div className="flex flex-col gap-3 border-b border-(--line) px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <FilterPills
-            items={tabs.map((tab) => ({
-              href: buildTabUrl(tab.value),
-              label: tab.label,
-              active: status === tab.value,
-            }))}
-          />
-          <div className="flex items-center gap-2">
-            <form method="GET" className="relative min-w-[200px] flex-1 sm:w-[240px] sm:flex-none">
-              <input type="hidden" name="status" value={status} />
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-(--ink-mute)" />
-              <input
-                type="search"
-                name="search"
-                defaultValue={search}
-                placeholder="Search applicants"
-                autoComplete="off"
-                maxLength={100}
-                className="admin-input py-2 pl-9 pr-3"
-              />
-            </form>
+        <ListToolbar
+          pills={tabs.map((tab) => ({ href: buildTabUrl(tab.value), label: tab.label, active: status === tab.value }))}
+          search={{ placeholder: "Search applicants", value: search, hidden: { status } }}
+          actions={
             <a href="/api/export/beta" download className="admin-btn-ghost py-2 text-[12px]">
               <Download className="h-3.5 w-3.5" />
               Export
             </a>
-          </div>
-        </div>
+          }
+          summary={resultSummary(page, result.pageSize, result.total, result.items.length)}
+          clearHref={search || status !== "PENDING" ? "/admin/beta?status=PENDING" : undefined}
+        />
 
         {result.items.length === 0 ? (
           <EmptyState
             icon={ClipboardList}
             title={search ? "No applications found" : status === "PENDING" ? "Queue is clear" : `No ${status.toLowerCase()} applications`}
-            description={search ? `No results for “${search}”.` : "Applications land here after creators submit the beta form."}
+            description={search ? `No results for “${search}”.` : "New applications appear here."}
           />
         ) : (
           <>

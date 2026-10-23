@@ -30,16 +30,16 @@ export default async function SettingsPage() {
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="System"
+        kicker="Admin"
         title="Settings"
-        description="Which data you are looking at, what your role allows, and how this console is configured. Health checks are on the Platform health page."
+        description="Data source, your role and setup." hint="Health checks are on the Platform health page."
       />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <AdminCard>
           <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Data source</h2>
           <p className="mt-1 text-[12.5px] text-(--ink-soft)">
-            Staging is safe to test on. Live changes real creators and real money.
+            Staging is safe to test. Live is real money.
           </p>
           <div className="mt-4">
             <DatabaseSwitch />
@@ -49,7 +49,7 @@ export default async function SettingsPage() {
             {!hasStagingDb && (
               <span className="text-red-700">
                 {" "}
-                No separate staging database is configured (STAGING_DB_* are not set), so Staging and Live read the same data.
+                No staging database is set, so both read the same data.
               </span>
             )}
           </p>
@@ -87,8 +87,7 @@ export default async function SettingsPage() {
         <AdminCard className="lg:col-span-2">
           <h2 className="text-[15px] font-semibold tracking-tight text-(--ink)">Owners</h2>
           <p className="mt-1 text-[12.5px] text-(--ink-soft)">
-            These accounts are super admins set in the server configuration (<code className="font-mono text-[12px]">ADMIN_EMAILS</code>).
-            Other team members, with their roles, are managed on the{" "}
+            Super admins set in the server config. Manage everyone else on the{" "}
             <Link href="/admin/admins" className="font-semibold text-brand-500 hover:underline">
               Admins page
             </Link>

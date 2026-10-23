@@ -1,11 +1,12 @@
 import { Suspense } from "react";
 import { ArrowLeftRight, Download } from "lucide-react";
-import { requireAdmin } from "@/lib/security";
+import { requireCapability } from "@/lib/admin-access";
 import { storeApi, type StorePage, type AdminTransaction } from "@/lib/store-api";
 import { parseTransactionFilter } from "@/lib/report-params";
 import { validatePage } from "@/lib/validation";
 import { AdminPage, AdminPageHeader, AdminCard } from "@/components/ui/page-shell";
 import { SavedViews } from "@/components/shared/SavedViews";
+import { ListToolbar, resultSummary } from "@/components/shared/ListToolbar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { Pagination } from "@/components/shared/Pagination";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +23,7 @@ interface Props {
 }
 
 export default async function TransactionsPage({ searchParams }: Props) {
-  const session = await requireAdmin();
+  const session = await requireCapability("VIEW_MONEY");
   const actor = session.user?.email ?? "";
   const raw = await searchParams;
   const filter = parseTransactionFilter(raw);
@@ -44,7 +45,7 @@ export default async function TransactionsPage({ searchParams }: Props) {
       <AdminPageHeader
         kicker="Money"
         title="Transactions"
-        description="Store orders, paid sessions and subscriptions in one list. Amounts stay in each payment's own currency."
+        description="Every payment in one list." hint="Store orders, paid sessions and subscriptions. Amounts keep their own currency."
         actions={
           <a href={exportHref} className="admin-btn-ghost py-2 text-[12px]">
             <Download className="h-4 w-4" /> Export CSV
@@ -55,32 +56,32 @@ export default async function TransactionsPage({ searchParams }: Props) {
         <SavedViews pageKey="transactions" />
       </Suspense>
 
-      <form method="get" className="flex flex-wrap items-end gap-2">
-        <Field label="Type">
-          <select name="kind" defaultValue={filter.kind ?? ""} className="admin-input">
-            <option value="">All</option>
-            <option value="STORE">Store</option>
-            <option value="BOOKING">Sessions</option>
-            <option value="SUBSCRIPTION">Subscriptions</option>
-          </select>
-        </Field>
-        <Field label="Status">
-          <select name="status" defaultValue={filter.status ?? ""} className="admin-input">
-            <option value="">Any</option>
-            {["PAID", "FULFILLED", "PENDING", "CREATED", "FAILED", "EXPIRED", "REFUND_PENDING", "REFUNDED"].map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="From"><input type="date" name="from" defaultValue={filter.from ?? ""} className="admin-input" /></Field>
-        <Field label="To"><input type="date" name="to" defaultValue={filter.to ?? ""} className="admin-input" /></Field>
-        <Field label="Search">
-          <input type="search" name="q" defaultValue={filter.q ?? ""} placeholder="Email, payment or order id" maxLength={100} className="admin-input" />
-        </Field>
-        <button type="submit" className="rounded-lg bg-(--ink) px-3.5 py-2 text-[13px] font-semibold text-white">Apply</button>
-      </form>
-
       <AdminCard padded={false}>
+              <form method="get" className="flex flex-wrap items-end gap-2 border-b border-(--line) px-4 py-3">
+                <Field label="Type">
+                  <select name="kind" defaultValue={filter.kind ?? ""} className="admin-input">
+                    <option value="">All</option>
+                    <option value="STORE">Store</option>
+                    <option value="BOOKING">Sessions</option>
+                    <option value="SUBSCRIPTION">Subscriptions</option>
+                  </select>
+                </Field>
+                <Field label="Status">
+                  <select name="status" defaultValue={filter.status ?? ""} className="admin-input">
+                    <option value="">Any</option>
+                    {["PAID", "FULFILLED", "PENDING", "CREATED", "FAILED", "EXPIRED", "REFUND_PENDING", "REFUNDED"].map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="From"><input type="date" name="from" defaultValue={filter.from ?? ""} className="admin-input" /></Field>
+                <Field label="To"><input type="date" name="to" defaultValue={filter.to ?? ""} className="admin-input" /></Field>
+                <Field label="Search">
+                  <input type="search" name="q" defaultValue={filter.q ?? ""} placeholder="Email, payment or order id" maxLength={100} className="admin-input" />
+                </Field>
+                <button type="submit" className="rounded-lg bg-(--ink) px-3.5 py-2 text-[13px] font-semibold text-white">Apply</button>
+              </form>
+        {result && <ListToolbar summary={resultSummary(page + 1, PAGE_SIZE, result.total, result.items.length)} clearHref={Object.keys(kept).length > 0 ? "/admin/transactions" : undefined} />}
         {error ? (
           <div className="p-5">
             <p className="text-[13px] font-semibold text-red-700">Could not load transactions</p>
@@ -90,14 +91,14 @@ export default async function TransactionsPage({ searchParams }: Props) {
           <EmptyState
             icon={ArrowLeftRight}
             title="No transactions"
-            description="Nothing matches these filters."
+            description="Try different filters."
             action={Object.keys(kept).length > 0 ? { label: "Clear filters", href: "/admin/transactions" } : undefined}
           />
         ) : (
           <div className="overflow-x-auto">
             <table className="admin-table">
               <thead>
-                <tr><th>When</th><th>Type</th><th>Creator / payer</th><th>Customer</th><th>Status</th><th className="text-right">Gross</th><th className="text-right">Fee</th><th className="text-right">Net</th></tr>
+                <tr><th>When</th><th>Type</th><th>Creator / payer</th><th>Customer</th><th>Status</th><th className="text-right">Gross</th><th className="text-right">Plugio fee</th><th className="text-right">Gateway charge</th><th className="text-right">Net</th></tr>
               </thead>
               <tbody>
                 {result.items.map((t) => (
@@ -118,6 +119,7 @@ export default async function TransactionsPage({ searchParams }: Props) {
                     </td>
                     <td className="whitespace-nowrap text-right tabular-nums">{formatMinor(t.grossMinor, t.currency)}</td>
                     <td className="whitespace-nowrap text-right tabular-nums">{formatMinor(t.feeMinor, t.currency)}</td>
+                    <td className="whitespace-nowrap text-right tabular-nums">{formatMinor(t.gatewayFeeMinor ?? 0, t.currency)}</td>
                     <td className="whitespace-nowrap text-right tabular-nums">{formatMinor(t.netMinor, t.currency)}</td>
                   </tr>
                 ))}

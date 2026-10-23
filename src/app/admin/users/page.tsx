@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Users, Search, Download } from "lucide-react";
+import { Users, Download } from "lucide-react";
 import { requireAdmin } from "@/lib/security";
 import { getUsers, getDashboardStats, USER_SORTS, type UserSort } from "@/lib/db/queries";
 import { getActiveDbContext } from "@/lib/db";
@@ -8,17 +8,18 @@ import { validateSearch, validatePage } from "@/lib/validation";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Pagination } from "@/components/shared/Pagination";
 import { SavedViews } from "@/components/shared/SavedViews";
+import { ListToolbar, resultSummary } from "@/components/shared/ListToolbar";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { AdminPage, AdminPageHeader, AdminCard, FilterPills } from "@/components/ui/page-shell";
+import { AdminPage, AdminPageHeader, AdminCard, KpiTile } from "@/components/ui/page-shell";
 import { formatDate, getInitials } from "@/lib/utils";
 import type { AdminUserListFilter } from "@/types";
 
 const USER_FILTERS: { value: AdminUserListFilter; label: string }[] = [
   { value: "ALL", label: "All" },
-  { value: "APPROVED_NO_TRIAL", label: "No trial" },
-  { value: "TRIAL_NO_PUBLISH", label: "No publish" },
-  { value: "TRIAL_ENDING", label: "Ending" },
-  { value: "TRIALING", label: "Trial" },
+  { value: "APPROVED_NO_TRIAL", label: "Needs trial" },
+  { value: "TRIAL_NO_PUBLISH", label: "Not publishing" },
+  { value: "TRIAL_ENDING", label: "Trial ending" },
+  { value: "TRIALING", label: "On trial" },
   { value: "PAID", label: "Paid" },
   { value: "FREE", label: "No plan" },
 ];
@@ -59,56 +60,55 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
   };
   return (
     <AdminPage>
-      <AdminPageHeader kicker="Work" title="Creators" description="Everyone who has signed in to Plugio. Filters show who needs a nudge: approved but no trial, trialing but never published, or trial ending." />
+      <AdminPageHeader kicker="People" title="Creators" description="Everyone who has signed in." hint="Use the filters to find who needs a nudge: approved but no trial, trialing but never published, or trial ending." />
       <Suspense fallback={null}>
         <SavedViews pageKey="creators" />
       </Suspense>
 
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <KpiTile label="All creators" value={stats.total_users.toLocaleString()} href="/admin/users" />
+        <KpiTile label="New, 7 days" value={`+${stats.new_last_7_days}`} />
+        <KpiTile label="Approved" value={stats.approved_users.toLocaleString()} />
+        <KpiTile
+          label="Waiting for access"
+          value={stats.pending_requests.toLocaleString()}
+          href="/admin/beta?status=PENDING"
+          tone={stats.pending_requests > 0 ? "alert" : "default"}
+        />
+      </div>
+
       <AdminCard padded={false}>
-        <div className="flex flex-col gap-3 border-b border-(--line) px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-            <FilterPills
-              items={USER_FILTERS.map((tab) => ({
-                href: `/admin/users?filter=${tab.value}${search ? `&search=${encodeURIComponent(search)}` : ""}`,
-                label: tab.label,
-                active: filter === tab.value,
-              }))}
-            />
-            <p className="shrink-0 text-[12px] text-(--ink-mute)">
-              {stats.total_users.toLocaleString()} total · +{stats.new_last_7_days} / 7d
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <form method="GET" className="relative min-w-[200px] flex-1 sm:w-[240px] sm:flex-none">
-              {filter !== "ALL" && <input type="hidden" name="filter" value={filter} />}
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-(--ink-mute)" />
-              <input
-                type="search"
-                name="search"
-                defaultValue={search}
-                placeholder="Name or email"
-                autoComplete="off"
-                maxLength={100}
-                className="admin-input py-2 pl-9 pr-3"
-              />
-            </form>
+        <ListToolbar
+          pills={USER_FILTERS.map((tab) => ({
+            href: `/admin/users?filter=${tab.value}${search ? `&search=${encodeURIComponent(search)}` : ""}`,
+            label: tab.label,
+            active: filter === tab.value,
+          }))}
+          search={{
+            placeholder: "Search name or email",
+            value: search,
+            hidden: { ...(filter !== "ALL" ? { filter } : {}), ...(sort !== "joined" || dir !== "desc" ? { sort, dir } : {}) },
+          }}
+          actions={
             <a href="/api/export/users" download className="admin-btn-ghost py-2 text-[12px]">
               <Download className="h-3.5 w-3.5" />
               Export
             </a>
-          </div>
-        </div>
+          }
+          summary={resultSummary(page, result.pageSize, result.total, result.items.length)}
+          clearHref={search || filter !== "ALL" ? "/admin/users" : undefined}
+        />
 
         {result.items.length === 0 ? (
           <EmptyState
             icon={Users}
-            title={search ? "No users found" : "No users yet"}
+            title={search ? "No creators found" : filter !== "ALL" ? "Nobody in this group" : "No creators yet"}
             description={
               search
                 ? `Nothing matched “${search}”.`
                 : filter !== "ALL"
-                  ? "Nobody is in this group right now. That can be good news."
-                  : "People appear here after they sign in with Google."
+                  ? "Try another filter."
+                  : "People appear after they sign in."
             }
             action={search || filter !== "ALL" ? { label: "Clear filters", href: "/admin/users" } : undefined}
           />
@@ -124,7 +124,6 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                     <th>Plan</th>
                     <SortTh k="channels" active={sort} dir={dir} href={sortHref("channels")} right>Channels</SortTh>
                     <SortTh k="published" active={sort} dir={dir} href={sortHref("published")} right>Published</SortTh>
-                    <th className="text-right"> </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -157,11 +156,6 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                       </td>
                       <td className="text-right tabular-nums text-(--ink-soft)">{user.channels ?? 0}</td>
                       <td className="text-right tabular-nums text-(--ink-soft)">{user.published ?? 0}</td>
-                      <td className="text-right">
-                        <Link href={`/admin/users/${user.id}`} className="text-[12.5px] font-semibold text-brand-500">
-                          Open
-                        </Link>
-                      </td>
                     </tr>
                   ))}
                 </tbody>

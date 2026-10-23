@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Store } from "lucide-react";
-import { requireAdmin } from "@/lib/security";
+import { requireCapability } from "@/lib/admin-access";
 import { storeApi, type StorePage } from "@/lib/store-api";
 import { validatePage } from "@/lib/validation";
 import { AdminPage, AdminPageHeader, AdminCard, FilterPills } from "@/components/ui/page-shell";
@@ -8,6 +8,9 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { Pagination } from "@/components/shared/Pagination";
 import { StoreRowAction } from "@/components/store/StoreRowAction";
 import { CommissionPolicyForm } from "@/components/store/CommissionPolicyForm";
+import { MoneyView } from "@/components/store/MoneyView";
+import { ListToolbar, resultSummary } from "@/components/shared/ListToolbar";
+import { parseRange } from "@/lib/report-params";
 import { PayoutSettingsForm } from "@/components/store/PayoutSettingsForm";
 import { Badge } from "@/components/ui/badge";
 import { statusTone, statusLabel } from "@/lib/status-tone";
@@ -32,8 +35,9 @@ import {
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
-type Tab = "payouts" | "settlements" | "kyc" | "exceptions" | "orders" | "products" | "commission";
+type Tab = "money" | "payouts" | "settlements" | "kyc" | "exceptions" | "orders" | "products" | "commission";
 const TABS: { id: Tab; label: string }[] = [
+  { id: "money", label: "Money" },
   { id: "payouts", label: "Payouts" },
   { id: "settlements", label: "Settlements" },
   { id: "kyc", label: "Verification" },
@@ -44,7 +48,7 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 interface StorePageProps {
-  searchParams: Promise<{ tab?: string; status?: string; page?: string; recon?: string }>;
+  searchParams: Promise<{ tab?: string; status?: string; page?: string; recon?: string; from?: string; to?: string; source?: string }>;
 }
 
 const EXCEPTION_LABEL: Record<"GATEWAY_REFUND" | "DISPUTE" | "PAID_SESSION_CANCELLED", string> = {
@@ -80,10 +84,10 @@ function Pager<T>({ result, searchParams }: { result: StorePage<T>; searchParams
 }
 
 export default async function StoreAdminPage({ searchParams }: StorePageProps) {
-  const session = await requireAdmin();
+  const session = await requireCapability("VIEW_MONEY");
   const actor = session.user?.email ?? "";
   const params = await searchParams;
-  const tab: Tab = TABS.some((t) => t.id === params.tab) ? (params.tab as Tab) : "payouts";
+  const tab: Tab = TABS.some((t) => t.id === params.tab) ? (params.tab as Tab) : "money";
   const page = validatePage(params.page) - 1; // backend pages are 0-based
   const status = params.status === "PAID" || params.status === "REJECTED" ? params.status : "REQUESTED";
 
@@ -92,12 +96,13 @@ export default async function StoreAdminPage({ searchParams }: StorePageProps) {
   return (
     <AdminPage>
       <AdminPageHeader
-        kicker="Digital store"
+        kicker="Marketplace"
         title="Store operations"
-        description="Pay out seller balances and take down products. Every action is audited."
+        description="Money, payouts and products." hint="Every action here is audited."
       />
       <FilterPills items={TABS.map((t) => ({ href: `/admin/store?tab=${t.id}`, label: t.label, active: tab === t.id }))} />
 
+      {tab === "money" && <MoneyTab actor={actor} params={params} page={page} />}
       {tab === "payouts" && <PayoutsTab actor={actor} status={status} page={page} />}
       {tab === "settlements" && <SettlementsTab actor={actor} page={page} runRecon={params.recon === "1"} />}
       {tab === "kyc" && <KycTab actor={actor} status={kycStatus} page={page} />}
@@ -107,6 +112,22 @@ export default async function StoreAdminPage({ searchParams }: StorePageProps) {
       {tab === "commission" && <CommissionTab actor={actor} />}
     </AdminPage>
   );
+}
+
+async function MoneyTab({ actor, params, page }: { actor: string; params: { from?: string; to?: string; source?: string }; page: number }) {
+  const range = parseRange({ from: params.from, to: params.to });
+  const source = params.source === "STORE" || params.source === "BOOKING" ? params.source : undefined;
+  let overview;
+  let creators = null;
+  try {
+    [overview, creators] = await Promise.all([
+      storeApi.moneyOverview(actor, range, source),
+      storeApi.moneyCreators(actor, range, source, page),
+    ]);
+  } catch (e) {
+    return <ErrorCard error={e} />;
+  }
+  return <MoneyView overview={overview} creators={creators} filters={{ ...range, source }} />;
 }
 
 async function CommissionTab({ actor }: { actor: string }) {
@@ -123,6 +144,7 @@ async function CommissionTab({ actor }: { actor: string }) {
       <CommissionPolicyForm
         digital={String(policy.digitalProductsFeePercent)}
         bookings={String(policy.bookingsFeePercent)}
+        gateway={String(policy.gatewayFeePercent ?? 0)}
         version={policy.version}
         updatedBy={policy.updatedBy}
         updatedAt={policy.updatedAt ? formatDateTime(policy.updatedAt) : null}
@@ -152,12 +174,9 @@ async function ExceptionsTab({ actor, page }: { actor: string; page: number }) {
   }
   return (
     <AdminCard padded={false}>
-      <p className="border-b border-(--line) px-4 py-3 text-[12.5px] text-(--ink-soft)">
-        Refunds and chargebacks made at Razorpay outside Plugio. The amount is held back from the seller&apos;s withdrawable
-        balance; nothing is refunded or debited automatically. Close an item only after you have dealt with it.
-      </p>
+      <ListToolbar summary={`${resultSummary(result.page + 1, result.size, result.total, result.items.length)}. Held amounts stay with Plugio until you close the item.`} />
       {result.items.length === 0 ? (
-        <EmptyState icon={Store} title="Nothing to review" description="Gateway refunds and disputes appear here." />
+        <EmptyState icon={Store} title="Nothing to review" description="Refunds and disputes appear here." />
       ) : (
         <div className="overflow-x-auto">
           <table className="admin-table">
@@ -230,16 +249,17 @@ async function PayoutsTab({ actor, status, page }: { actor: string; status: stri
   }
   return (
     <>
-      <FilterPills
-        items={(["REQUESTED", "PAID", "REJECTED"] as const).map((s) => ({
-          href: `/admin/store?tab=payouts&status=${s}`,
-          label: s === "REQUESTED" ? "To pay" : s === "PAID" ? "Paid" : "Rejected",
-          active: status === s,
-        }))}
-      />
       <AdminCard padded={false}>
+        <ListToolbar
+          pills={(["REQUESTED", "PAID", "REJECTED"] as const).map((s) => ({
+            href: `/admin/store?tab=payouts&status=${s}`,
+            label: s === "REQUESTED" ? "To pay" : s === "PAID" ? "Paid" : "Rejected",
+            active: status === s,
+          }))}
+          summary={resultSummary(result.page + 1, result.size, result.total, result.items.length)}
+        />
         {result.items.length === 0 ? (
-          <EmptyState icon={Store} title="No payouts here" description="Seller payout requests appear in this queue." />
+          <EmptyState icon={Store} title={status === "REQUESTED" ? "Nothing to pay" : "No payouts here"} description={status === "REQUESTED" ? "No withdrawals waiting." : "Nothing in this list."} />
         ) : (
           <div className="overflow-x-auto">
             <table className="admin-table">
@@ -295,6 +315,7 @@ const KIND_LABEL: Record<string, string> = {
   PAYOUT_RESTORE_MISMATCH: "Rejected payouts not restored correctly",
   SALE_CREDIT_MISMATCH: "Sale credit differs from the order",
   PLATFORM_FEE_MISMATCH: "Platform fee differs from the order",
+  GATEWAY_FEE_MISMATCH: "Gateway charge differs from the order",
   PAID_WITHOUT_REFERENCE: "Paid with no bank reference",
 };
 
@@ -314,7 +335,7 @@ async function SettlementsTab({ actor, page, runRecon }: { actor: string; page: 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-[13px] font-semibold">Reconciliation</p>
-              <p className="text-[12.5px] text-(--ink-soft)">Checks the ledger against orders and payouts. It reads every order, so run it when you need it.</p>
+              <p className="text-[12.5px] text-(--ink-soft)">Checks the ledger against orders and payouts. Run it when needed.</p>
             </div>
             <Link href="/admin/store?tab=settlements&recon=1" className="rounded-lg border border-(--line) px-3 py-1.5 text-[12px] font-semibold hover:bg-[#F7F4EE]">Run reconciliation</Link>
           </div>
@@ -326,7 +347,7 @@ async function SettlementsTab({ actor, page, runRecon }: { actor: string; page: 
                 <p className={`text-[12.5px] ${report.balanced ? "text-emerald-700" : "font-semibold text-red-700"}`}>
                   {report.balanced
                     ? "Ledger, orders and payouts agree."
-                    : `${report.discrepancies.length} item(s) need a look. Booking earnings are not checked yet.`}
+                    : `${report.discrepancies.length} item(s) need a look.`}
                 </p>
               </div>
               <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-[12.5px] sm:grid-cols-4">
@@ -361,7 +382,7 @@ async function SettlementsTab({ actor, page, runRecon }: { actor: string; page: 
 
       <AdminCard padded={false}>
         <div className="flex items-center justify-between gap-3 p-4">
-          <p className="text-[12.5px] text-(--ink-soft)">Group every open payout into one batch, download the bank file, then settle it with the bank&apos;s reference.</p>
+          <p className="text-[12.5px] text-(--ink-soft)">Group open payouts, download the bank file, then settle with the bank reference.</p>
           <StoreRowAction label="Create batch from open payouts" fieldLabel={null} confirmLabel="Create batch" action={createSettlementAction} />
         </div>
         {batches.items.length === 0 ? (
@@ -389,7 +410,7 @@ async function SettlementsTab({ actor, page, runRecon }: { actor: string; page: 
                               confirmLabel="Settle batch" action={settleBatchAction.bind(null, b.id)} />
                             {b.exportedAt ? (
                               <>
-                                <p className="max-w-[220px] text-[11px] text-(--ink-soft)">Bank file downloaded {formatDateTime(b.exportedAt)}. The bank may have paid it: check the statement before cancelling.</p>
+                                <p className="max-w-[220px] text-[11px] text-(--ink-soft)">Bank file downloaded {formatDateTime(b.exportedAt)}. Check the bank statement before cancelling.</p>
                                 <StoreRowAction label="Cancel batch" fieldLabel="Reason" placeholder="Why cancel after download?" tone="danger" confirmLabel="Cancel batch"
                                   action={cancelBatchAction.bind(null, b.id)} />
                               </>
@@ -422,16 +443,17 @@ async function KycTab({ actor, status, page }: { actor: string; status: string; 
   }
   return (
     <>
-      <FilterPills
-        items={(["PENDING", "APPROVED", "REJECTED"] as const).map((s) => ({
-          href: `/admin/store?tab=kyc&status=${s}`,
-          label: s === "PENDING" ? "To review" : s === "APPROVED" ? "Approved" : "Rejected",
-          active: status === s,
-        }))}
-      />
       <AdminCard padded={false}>
+        <ListToolbar
+          pills={(["PENDING", "APPROVED", "REJECTED"] as const).map((s) => ({
+            href: `/admin/store?tab=kyc&status=${s}`,
+            label: s === "PENDING" ? "To review" : s === "APPROVED" ? "Approved" : "Rejected",
+            active: status === s,
+          }))}
+          summary={resultSummary(result.page + 1, result.size, result.total, result.items.length)}
+        />
         {result.items.length === 0 ? (
-          <EmptyState icon={Store} title="Nothing here" description="Creator identity submissions appear in this queue." />
+          <EmptyState icon={Store} title={status === "PENDING" ? "Nothing to review" : "Nothing here"} description={status === "PENDING" ? "No identity checks waiting." : "Nothing in this list."} />
         ) : (
           <div className="overflow-x-auto">
             <table className="admin-table">
@@ -490,13 +512,14 @@ async function OrdersTab({ actor, page }: { actor: string; page: number }) {
   }
   return (
     <AdminCard padded={false}>
+      <ListToolbar summary={resultSummary(result.page + 1, result.size, result.total, result.items.length)} />
       {result.items.length === 0 ? (
-        <EmptyState icon={Store} title="No orders yet" description="Paid store orders appear here." />
+        <EmptyState icon={Store} title="No orders yet" description="Paid orders appear here." />
       ) : (
         <div className="overflow-x-auto">
           <table className="admin-table">
             <thead>
-              <tr><th>Product</th><th>Seller</th><th>Buyer</th><th>Amount</th><th>Status</th></tr>
+              <tr><th>Product</th><th>Seller</th><th>Buyer</th><th>Amount</th><th>Gateway (Razorpay)</th><th>Status</th></tr>
             </thead>
             <tbody>
               {result.items.map((o) => (
@@ -504,7 +527,11 @@ async function OrdersTab({ actor, page }: { actor: string; page: number }) {
                   <td className="font-semibold">{o.productTitle}</td>
                   <td>{o.sellerName ?? "—"}</td>
                   <td className="text-[12.5px]">{o.buyerEmail}</td>
-                  <td className="tabular-nums">{inr(o.amountMinor)}<p className="text-[11px] text-(--ink-mute)">fee {inr(o.platformFeeMinor)}</p></td>
+                  <td className="tabular-nums">{inr(o.amountMinor)}<p className="text-[11px] text-(--ink-mute)">Plugio fee {inr(o.platformFeeMinor)}</p></td>
+                  <td className="tabular-nums text-[12.5px]">
+                    {inr(o.gatewayFeeMinor ?? 0)}<p className="text-[11px] text-(--ink-mute)">charged to creator</p>
+                    <p className="text-[11px] text-(--ink-mute)">{o.actualGatewayFeeKnown ? `Razorpay took ${inr(o.actualGatewayFeeMinor ?? 0)}` : "Razorpay fee not in yet"}</p>
+                  </td>
                   <td className="text-[12.5px]">
                     <Badge tone={statusTone(o.status)}>{statusLabel(o.status)}</Badge>
                     <p className="mt-1 text-[11px] text-(--ink-mute)">{formatDateTime(o.paidAt)}</p>
@@ -529,8 +556,9 @@ async function ProductsTab({ actor, page }: { actor: string; page: number }) {
   }
   return (
     <AdminCard padded={false}>
+      <ListToolbar summary={resultSummary(result.page + 1, result.size, result.total, result.items.length)} />
       {result.items.length === 0 ? (
-        <EmptyState icon={Store} title="No products yet" description="Seller products appear here." />
+        <EmptyState icon={Store} title="No products yet" description="Creator products appear here." />
       ) : (
         <div className="overflow-x-auto">
           <table className="admin-table">

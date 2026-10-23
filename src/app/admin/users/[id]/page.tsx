@@ -103,13 +103,13 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
   const trialEnding =
     subStatus === "TRIALING" && trialDaysLeft != null && trialDaysLeft <= 2;
   const chaseHint = needsTrial
-    ? "Approved, no trial. Send the coupon. Ask them to connect one channel and publish once (~20 min)."
+    ? "Approved, no trial. Send the coupon and ask them to connect a channel."
     : trialNoPublish
       ? connectedCount === 0
         ? "Trialing, zero channels. Ask them to connect one account today."
-        : "Trialing, connected, but no Plugio publish yet. Ask them to upload once."
+        : "Connected but has not published yet. Ask them to upload once."
       : trialEnding
-        ? `Trial ends in ${trialDaysLeft} day${trialDaysLeft === 1 ? "" : "s"}. Ask them to keep Creator at $27 / 2 months.`
+        ? `Trial ends in ${trialDaysLeft} day${trialDaysLeft === 1 ? "" : "s"}. Ask them to keep their plan.`
         : null;
 
   return (
@@ -119,7 +119,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
         className="inline-flex items-center gap-2 text-[13px] font-medium text-(--ink-soft) transition hover:text-(--ink)"
       >
         <ArrowLeft className="h-4 w-4" />
-        Users
+        Creators
       </Link>
 
       <AdminCard>
@@ -160,6 +160,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge status={user.access_status} />
                 <StatusBadge status={user.subscription_status ?? "NONE"} />
+                <Link href={`/admin/store/seller/${user.id}`} className="admin-btn-ghost py-1.5 text-[12px]">Money statement</Link>
               </div>
             </div>
           </div>
@@ -424,7 +425,7 @@ export default async function UserDetailPage({ params }: UserDetailPageProps) {
             <CreatorNotes userId={user.id} notes={notes} readOnly={readOnlyMode} />
           ) : (
             <p className="mt-4 text-[13px] text-(--ink-mute)">
-              Notes are not available yet. Apply backend migration V90 (admin_creator_notes) on this database.
+              Notes are not set up yet. Apply migration V90.
             </p>
           )}
         </AdminCard>

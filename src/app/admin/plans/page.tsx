@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/security";
+import { requireCapability } from "@/lib/admin-access";
 import {
   billingPlanSettingsSchemaAvailable,
   getBillingPlanSettings,
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function PlansPage() {
-  await requireAdmin();
+  await requireCapability("VIEW_MONEY");
 
   let catalog: Awaited<ReturnType<typeof getBillingPlanSettings>> | null = null;
   let loadError: string | null = null;
@@ -24,7 +24,7 @@ export default async function PlansPage() {
       catalog = await getBillingPlanSettings();
     } else {
       loadError =
-        "The billing_plan_settings table is not available yet. Apply backend migration V44, then restart the API.";
+        "Plan settings are not set up yet. Apply migration V44 and restart the API.";
     }
   } catch (error: unknown) {
     console.error("[PlansPage] Failed to load plan catalog:", error);
@@ -33,16 +33,8 @@ export default async function PlansPage() {
 
   return (
     <AdminPage>
-      <AdminPageHeader kicker="Money" title="Plans" description="Prices and channel limits that checkout and the landing page read." />
+      <AdminPageHeader kicker="Pricing" title="Plans" description="Prices and channel limits." hint="Checkout and the landing page read these. USD is international and INR is India (not converted). Payment methods are switched on in the Razorpay Dashboard." />
 
-      <div className="mb-5 max-w-2xl">
-        <p className="text-[13px] leading-relaxed text-(--ink-soft)">
-          This is the commercial catalog. Checkout, landing prices, save percentages, and channel
-          limits all read this row. USD is international; INR is India — not converted from USD.
-          Coupons (percent off) stay on the Coupons desk. Enable UPI, cards, netbanking, and
-          international/USD in the Razorpay Dashboard; this app cannot turn those methods on.
-        </p>
-      </div>
       {loadError ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-medium text-amber-950">
           {loadError}

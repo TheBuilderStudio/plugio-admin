@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function AdminPage({
@@ -28,25 +29,40 @@ export function AdminPageHeader({
   kicker,
   title,
   description,
+  hint,
   actions,
 }: {
+  /** The sector this page belongs to, matching the sidebar. */
   kicker?: string;
   title: string;
+  /** One short line. Anything longer belongs in {@link hint}. */
   description?: string;
+  /** The longer explanation, tucked behind an info icon so it never crowds the page. */
+  hint?: string;
   actions?: ReactNode;
 }) {
   return (
-    <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0 space-y-1.5">
+    <header className="relative flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="min-w-0 space-y-1">
         {kicker ? <p className="admin-kicker">{kicker}</p> : null}
-        <h1 className="text-[26px] font-semibold tracking-tight text-(--ink) sm:text-[30px]">
-          {title}
-        </h1>
-        {description ? (
-          <p className="max-w-2xl text-[14px] leading-relaxed text-(--ink-soft)">
-            {description}
-          </p>
-        ) : null}
+        <div className="flex items-center gap-2">
+          <h1 className="text-[24px] font-semibold tracking-tight text-(--ink) sm:text-[28px]">{title}</h1>
+          {hint ? (
+            <details className="group">
+              <summary
+                aria-label={`About ${title}`}
+                title="About this page"
+                className="flex h-6 w-6 cursor-pointer list-none items-center justify-center rounded-full text-(--ink-mute) transition hover:bg-black/5 hover:text-(--ink) group-open:bg-black/5 [&::-webkit-details-marker]:hidden"
+              >
+                <Info className="h-4 w-4" />
+              </summary>
+              <div className="absolute inset-x-0 top-full z-20 mt-2 rounded-xl border border-(--line) bg-(--paper) p-3 text-[12.5px] leading-relaxed text-(--ink-soft) shadow-lg sm:right-auto sm:w-80">
+                {hint}
+              </div>
+            </details>
+          ) : null}
+        </div>
+        {description ? <p className="max-w-xl text-[13.5px] text-(--ink-soft)">{description}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </header>

@@ -97,6 +97,11 @@ export interface StoreOrder {
   buyerEmail: string;
   amountMinor: number;
   platformFeeMinor: number;
+  /** What the creator was charged for the payment gateway on this order. */
+  gatewayFeeMinor?: number;
+  /** What Razorpay actually charged Plugio (GST included). Only meaningful when actualGatewayFeeKnown. */
+  actualGatewayFeeMinor?: number;
+  actualGatewayFeeKnown?: boolean;
   currency: string;
   status: string;
   paidAt: string | null;
@@ -160,6 +165,11 @@ export interface SellerBreakdown {
   owedMinor: number;
   reconciles: boolean;
   holdDays?: number;
+  grossSalesMinor?: number;
+  platformFeeMinor?: number;
+  /** Payment gateway charge the creator paid, net of charges returned on refunds. */
+  gatewayFeeMinor?: number;
+  refundedMinor?: number;
 }
 
 export interface SellerStatementRow {
@@ -175,6 +185,7 @@ export interface SellerStatementRow {
   payoutId: string | null;
   payoutStatus: string | null;
   payoutReference: string | null;
+  source?: "STORE" | "BOOKING" | null;
 }
 
 export interface SellerStatement {
@@ -198,6 +209,8 @@ export interface PayoutSettings {
 export interface CommissionPolicy {
   digitalProductsFeePercent: number;
   bookingsFeePercent: number;
+  /** Payment gateway (Razorpay) charge, GST included, paid by the creator on top of the fee above. 0 = none. */
+  gatewayFeePercent?: number;
   version: number;
   updatedBy: string | null;
   updatedAt: string | null;
@@ -216,6 +229,7 @@ export interface AdminTransaction {
   currency: string;
   grossMinor: number;
   feeMinor: number;
+  gatewayFeeMinor?: number;
   netMinor: number;
   gatewayPaymentId: string | null;
 }
@@ -227,6 +241,7 @@ export interface RevenueRow {
   count: number;
   grossMinor: number;
   feeMinor: number;
+  gatewayFeeMinor?: number;
   netMinor: number;
 }
 
@@ -239,6 +254,7 @@ export interface CommissionRow {
   count: number;
   grossMinor: number;
   feeMinor: number;
+  gatewayFeeMinor?: number;
   netMinor: number;
 }
 
@@ -355,9 +371,82 @@ async function fetchCsv(actor: string, urlPathWithQuery: string, what: string): 
   return res.text();
 }
 
+// ───────────────────────── money: where every rupee goes ─────────────────────────
+
+export type MoneySource = "STORE" | "BOOKING";
+
+/** gross - refunded - gatewayCharged - platformFee = creatorNet. Charges are net of what refunds gave back. */
+export interface MoneyTotals {
+  saleCount: number;
+  grossMinor: number;
+  refundedMinor: number;
+  gatewayChargedMinor: number;
+  platformFeeMinor: number;
+  creatorNetMinor: number;
+}
+
+export interface MoneyGatewayActual {
+  /** What Razorpay actually charged Plugio, GST included. */
+  actualFeeMinor: number;
+  actualTaxMinor: number;
+  paymentsWithFee: number;
+  paymentsWithoutFee: number;
+  /** What creators were charged for the gateway. */
+  chargedToCreatorsMinor: number;
+  /** Positive: creators paid more than Razorpay charged. Negative: Plugio is covering the difference. */
+  marginMinor: number;
+  /** False while some payments have no Razorpay fee yet; the margin is then only partial. */
+  complete: boolean;
+}
+
+export interface MoneyOverview {
+  from: string;
+  to: string;
+  currency: string;
+  source: MoneySource | null;
+  total: MoneyTotals;
+  store: MoneyTotals;
+  booking: MoneyTotals;
+  gateway: MoneyGatewayActual;
+  /** Plugio fee plus the gateway margin. */
+  plugioIncomeMinor: number;
+  plugioIncomeComplete: boolean;
+  payouts: { paidMinor: number; paidCount: number; inReviewMinor: number; inReviewCount: number; rejectedMinor: number };
+  liabilities: { creatorBalancesMinor: number; creatorsWithBalance: number; negativeBalancesMinor: number; withdrawalsInReviewMinor: number };
+}
+
+export interface MoneyCreatorRow {
+  sellerId: string;
+  name: string | null;
+  email: string | null;
+  saleCount: number;
+  grossMinor: number;
+  refundedMinor: number;
+  gatewayChargedMinor: number;
+  platformFeeMinor: number;
+  creatorNetMinor: number;
+  paidOutMinor: number;
+  inReviewMinor: number;
+  balanceNowMinor: number;
+}
+
+export interface MoneyCreatorPage {
+  rows: MoneyCreatorRow[];
+  page: number;
+  size: number;
+  total: number;
+  totalPages: number;
+}
+
 export const storeApi = {
+  moneyOverview: (actor: string, range: { from?: string; to?: string }, source?: MoneySource) =>
+    call<MoneyOverview>(actor, `/money/overview${query({ ...range, source })}`),
+  moneyCreators: (actor: string, range: { from?: string; to?: string }, source: MoneySource | undefined, page: number) =>
+    call<MoneyCreatorPage>(actor, `/money/creators${query({ ...range, source, page, size: 50 })}`),
+  moneyCreatorsCsv: (actor: string, range: { from?: string; to?: string }, source?: MoneySource): Promise<string> =>
+    fetchCsv(actor, `/api/admin/store/money/creators/csv${query({ ...range, source })}`, "money by creator"),
   commissionPolicy: (actor: string) => call<CommissionPolicy>(actor, "/monetization"),
-  updateCommissionPolicy: (actor: string, body: { digitalProductsFeePercent: number; bookingsFeePercent: number; version: number }) =>
+  updateCommissionPolicy: (actor: string, body: { digitalProductsFeePercent: number; bookingsFeePercent: number; gatewayFeePercent: number; version: number }) =>
     call<CommissionPolicy>(actor, "/monetization", { method: "PUT", body }),
   payouts: (actor: string, status: string, page: number) =>
     call<StorePage<StorePayout>>(actor, `/payouts?status=${encodeURIComponent(status)}&page=${page}`),
@@ -397,8 +486,11 @@ export const storeApi = {
     call<StorePage<PaymentExceptionRow>>(actor, `/exceptions?activeOnly=${activeOnly}&page=${page}`),
   dismissException: (actor: string, id: string, reason: string) =>
     call<PaymentExceptionRow>(actor, `/exceptions/${encodeURIComponent(id)}/dismiss`, { method: "POST", body: { reason } }),
-  sellerStatement: (actor: string, sellerId: string, page: number) =>
-    call<SellerStatement>(actor, `/sellers/${encodeURIComponent(sellerId)}/statement?page=${page}&size=50`),
+  sellerStatement: (actor: string, sellerId: string, page: number, source?: "STORE" | "BOOKING") =>
+    call<SellerStatement>(
+      actor,
+      `/sellers/${encodeURIComponent(sellerId)}/statement?page=${page}&size=50${source ? `&source=${source}` : ""}`
+    ),
   /** Approves the full refund of a paid session the creator cancelled (customer 100%, creator share debited, fee returned). */
   refundCancelledSession: (actor: string, id: string) =>
     call<{ result: "REFUNDED" | "IN_PROGRESS"; item: PaymentExceptionRow }>(

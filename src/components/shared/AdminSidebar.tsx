@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -23,11 +24,12 @@ import {
   type LucideIcon,
   Eye,
   LogOut,
+  ChevronDown,
 } from "lucide-react";
 import { logoutAction } from "@/actions/user.actions";
 import { cn } from "@/lib/utils";
 import { DatabaseSwitch } from "@/components/shared/DatabaseSwitch";
-import { NAV, type NavEntry, type NavIconName } from "@/components/shared/nav-config";
+import { NAV, NAV_GROUPS, type NavEntry, type NavGroup, type NavIconName } from "@/components/shared/nav-config";
 
 const ICONS: Record<NavIconName, LucideIcon> = {
   dashboard: LayoutDashboard,
@@ -77,9 +79,26 @@ export function AdminSidebar({
   onNavigate,
 }: AdminSidebarProps) {
   const pathname = usePathname();
-  const groups = (["Work", "Money", "System"] as const)
+  const groups = NAV_GROUPS
     .map((group) => ({ group, items: items.filter((i) => i.group === group) }))
     .filter((g) => g.items.length > 0);
+  const [folded, setFolded] = useState<Partial<Record<NavGroup, boolean>>>({});
+
+  // Remember which sectors the admin folded away. Storage can be blocked, so this is a convenience only.
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("admin-nav-folded");
+      if (saved) setFolded(JSON.parse(saved));
+    } catch { /* keep everything open */ }
+  }, []);
+
+  function toggle(group: NavGroup) {
+    setFolded((prev) => {
+      const next = { ...prev, [group]: !prev[group] };
+      try { window.localStorage.setItem("admin-nav-folded", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }
 
   return (
     <aside className="flex h-full w-(--sidebar-width) shrink-0 select-none flex-col border-r border-white/8 bg-sidebar-bg">
@@ -102,43 +121,65 @@ export function AdminSidebar({
         </div>
       )}
 
-      <nav className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-2.5 py-4">
-        {groups.map(({ group, items: groupItems }) => (
-          <div key={group}>
-            <p className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">{group}</p>
-            <ul className="space-y-0.5">
-              {groupItems.map((item) => {
-                const active = isNavActive(pathname, item.href);
-                const Icon = ICONS[item.icon] ?? LayoutDashboard;
-                const badge = badges[item.href] ?? 0;
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      onClick={onNavigate}
-                      aria-current={active ? "page" : undefined}
-                      className={cn(
-                        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] font-medium outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-brand-500/60",
-                        active ? "bg-white/9 text-white" : "text-white/75 hover:bg-white/6 hover:text-white"
-                      )}
-                    >
-                      <Icon
-                        className={cn("h-[18px] w-[18px] shrink-0", active ? "text-brand-500" : "text-white/60")}
-                        strokeWidth={active ? 2.25 : 1.9}
-                      />
-                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                      {badge > 0 ? (
-                        <span className="rounded-md bg-brand-500 px-1.5 py-px text-[10px] font-bold tabular-nums text-white">
-                          {badge > 99 ? "99+" : badge}
-                        </span>
-                      ) : null}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
+      <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-2.5 py-3" aria-label="Sectors">
+        {groups.map(({ group, items: groupItems }) => {
+          const hasActive = groupItems.some((i) => isNavActive(pathname, i.href));
+          const single = group === "Overview";
+          // A sector never hides the page you are on.
+          const open = single || hasActive || !folded[group];
+          const groupBadge = groupItems.reduce((n, i) => n + (badges[i.href] ?? 0), 0);
+          return (
+            <div key={group} className={cn(!single && "pt-2")}>
+              {!single && (
+                <button
+                  type="button"
+                  onClick={() => toggle(group)}
+                  aria-expanded={open}
+                  className="flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-left text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/45 outline-hidden transition hover:text-white/75 focus-visible:ring-2 focus-visible:ring-brand-500/60"
+                >
+                  <span className="flex-1">{group}</span>
+                  {!open && groupBadge > 0 && (
+                    <span className="rounded-md bg-brand-500 px-1.5 py-px text-[10px] font-bold normal-case tabular-nums text-white">{groupBadge > 99 ? "99+" : groupBadge}</span>
+                  )}
+                  <ChevronDown className={cn("h-3 w-3 transition-transform", !open && "-rotate-90")} />
+                </button>
+              )}
+              {open && (
+                <ul className="space-y-0.5">
+                  {groupItems.map((item) => {
+                    const active = isNavActive(pathname, item.href);
+                    const Icon = ICONS[item.icon] ?? LayoutDashboard;
+                    const badge = badges[item.href] ?? 0;
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          onClick={onNavigate}
+                          aria-current={active ? "page" : undefined}
+                          className={cn(
+                            "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] font-medium outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-brand-500/60",
+                            active ? "bg-white/9 text-white" : "text-white/75 hover:bg-white/6 hover:text-white"
+                          )}
+                        >
+                          <Icon
+                            className={cn("h-[18px] w-[18px] shrink-0", active ? "text-brand-500" : "text-white/60")}
+                            strokeWidth={active ? 2.25 : 1.9}
+                          />
+                          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                          {badge > 0 ? (
+                            <span className="rounded-md bg-brand-500 px-1.5 py-px text-[10px] font-bold tabular-nums text-white">
+                              {badge > 99 ? "99+" : badge}
+                            </span>
+                          ) : null}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          );
+        })}
       </nav>
 
       <div className="shrink-0 space-y-2.5 border-t border-white/8 p-3">

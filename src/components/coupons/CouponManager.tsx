@@ -271,7 +271,7 @@ export function CouponManager({ coupons, catalog }: CouponManagerProps) {
           <EmptyState
             icon={Ticket}
             title="No coupons yet"
-            description="Create a trial coupon so approved creators can pay the discounted $7 checkout and start 7 days of Creator."
+            description="Create a trial coupon for approved creators."
           />
         ) : (
           <div className="overflow-x-auto">
