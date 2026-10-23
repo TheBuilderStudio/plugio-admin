@@ -418,29 +418,32 @@ function ActionCenter({ firstName, items }: { firstName: string; items: ActionIt
 }
 
 function buildFeed(
-  activity: AdminOverviewPayload["activity"],
-  auditLogs: OverviewViewProps["auditLogs"]
+  activity: AdminOverviewPayload["activity"] | undefined,
+  auditLogs: OverviewViewProps["auditLogs"] | undefined
 ) {
   const rows: { key: string; t: number; title: string; detail: string; ago: string }[] = [];
 
-  for (const item of activity) {
+  for (const item of (activity ?? [])) {
+    if (!item) continue;
     const t = new Date(item.occurred_at).getTime();
     rows.push({
       key: `u-${item.id}-${item.action}-${t}`,
       t,
-      title: item.name ?? item.email,
+      title: item.name ?? item.email ?? "User",
       detail: activityCopy(item.action),
       ago: formatRelativeTime(item.occurred_at),
     });
   }
 
-  for (const log of auditLogs) {
+  for (const log of (auditLogs ?? [])) {
+    if (!log) continue;
     const t = new Date(log.timestamp).getTime();
+    const actionName = (log.action ?? "ACTION").replaceAll("_", " ");
     rows.push({
       key: `a-${t}-${log.action}-${log.adminEmail}`,
       t,
-      title: log.action.replaceAll("_", " "),
-      detail: log.targetEmail ? `${log.adminEmail} → ${log.targetEmail}` : log.adminEmail,
+      title: actionName,
+      detail: log.targetEmail ? `${log.adminEmail} → ${log.targetEmail}` : (log.adminEmail ?? "Admin"),
       ago: formatRelativeTime(log.timestamp),
     });
   }

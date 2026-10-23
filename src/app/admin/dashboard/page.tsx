@@ -87,16 +87,16 @@ export default async function DashboardPage() {
       storeApi.kyc(actor, "PENDING", 0),
       storeApi.exceptions(actor, true, 0),
     ]);
-    if (payouts.status === "fulfilled" && payouts.value.total > 0)
+    if (payouts.status === "fulfilled" && (payouts.value?.total ?? 0) > 0)
       storeItems.push({ label: "Seller payouts to pay", count: payouts.value.total, href: "/admin/store?tab=payouts", tone: "money" });
-    if (kyc.status === "fulfilled" && kyc.value.total > 0)
+    if (kyc.status === "fulfilled" && (kyc.value?.total ?? 0) > 0)
       storeItems.push({ label: "Seller identity checks to review", count: kyc.value.total, href: "/admin/store?tab=kyc", tone: "money" });
-    if (exceptions.status === "fulfilled" && exceptions.value.total > 0)
+    if (exceptions.status === "fulfilled" && (exceptions.value?.total ?? 0) > 0)
       storeItems.push({ label: "Refunds and disputes open", count: exceptions.value.total, href: "/admin/store?tab=exceptions", tone: "urgent" });
   }
   let pulse: MarketplacePulse | null = null;
   pulse = await getMarketplacePulse().catch(() => null);
-  if (pulse && pulse.refundPending > 0)
+  if (pulse && (pulse.refundPending ?? 0) > 0)
     storeItems.push({ label: "Customer refunds stuck at the gateway", count: pulse.refundPending, href: "/admin/bookings?filter=NEEDS_ATTENTION", tone: "urgent" });
   const [funnel, revenue, retention] = await Promise.all([
     getFunnel().catch(() => null),

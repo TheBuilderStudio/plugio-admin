@@ -2,11 +2,52 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Eye, LogOut } from "lucide-react";
+import {
+  Activity,
+  CalendarClock,
+  Inbox,
+  BarChart3,
+  ArrowLeftRight,
+  ClipboardList,
+  LayoutDashboard,
+  Receipt,
+  Settings,
+  Shield,
+  Star,
+  Store,
+  Tags,
+  Terminal,
+  Ticket,
+  UserCog,
+  Users,
+  type LucideIcon,
+  Eye,
+  LogOut,
+} from "lucide-react";
 import { logoutAction } from "@/actions/user.actions";
 import { cn } from "@/lib/utils";
 import { DatabaseSwitch } from "@/components/shared/DatabaseSwitch";
-import { NAV, type NavEntry } from "@/components/shared/nav-config";
+import { NAV, type NavEntry, type NavIconName } from "@/components/shared/nav-config";
+
+const ICONS: Record<NavIconName, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  beta: ClipboardList,
+  users: Users,
+  bookings: CalendarClock,
+  inquiries: Inbox,
+  reviews: Star,
+  plans: Tags,
+  coupons: Ticket,
+  payments: Receipt,
+  transactions: ArrowLeftRight,
+  reports: BarChart3,
+  store: Store,
+  health: Activity,
+  admins: UserCog,
+  audit: Shield,
+  logs: Terminal,
+  settings: Settings,
+};
 
 interface AdminSidebarProps {
   adminName: string | null | undefined;
@@ -68,7 +109,7 @@ export function AdminSidebar({
             <ul className="space-y-0.5">
               {groupItems.map((item) => {
                 const active = isNavActive(pathname, item.href);
-                const Icon = item.icon;
+                const Icon = ICONS[item.icon] ?? LayoutDashboard;
                 const badge = badges[item.href] ?? 0;
                 return (
                   <li key={item.href}>

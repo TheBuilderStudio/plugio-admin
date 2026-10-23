@@ -32,8 +32,10 @@ export interface AdminAccess {
   can: (capability: Capability) => boolean;
 }
 
-export function accessForRole(role: AdminRole): AdminAccess {
-  const caps = ROLE_CAPABILITIES[role];
-  return { role, can: (capability) => caps.has(capability) };
+export function accessForRole(role?: AdminRole | string | null): AdminAccess {
+  const normalized = (role ?? "").toUpperCase() as AdminRole;
+  const validRole: AdminRole = normalized in ROLE_CAPABILITIES ? normalized : "SUPPORT";
+  const caps = ROLE_CAPABILITIES[validRole];
+  return { role: validRole, can: (capability) => caps.has(capability) };
 }
 

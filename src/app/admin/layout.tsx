@@ -42,10 +42,10 @@ export default async function AdminLayout({
   return (
     <AdminReadOnlyProvider isReadOnly={isReadOnly}>
       <AdminShell
-        adminName={session.user.name}
-        adminEmail={session.user.email}
-        adminImage={session.user.image}
-        roleLabel={access.role.replace("_", " ").toLowerCase()}
+        adminName={session.user?.name ?? "Admin"}
+        adminEmail={session.user?.email ?? ""}
+        adminImage={session.user?.image ?? null}
+        roleLabel={(access?.role ?? "SUPPORT").replace("_", " ").toLowerCase()}
         items={items}
         isReadOnly={isReadOnly}
         pendingBeta={pendingBeta}

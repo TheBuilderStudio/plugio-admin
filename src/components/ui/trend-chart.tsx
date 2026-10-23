@@ -1,15 +1,17 @@
 import type { DailyPoint } from "@/lib/db/health";
 
 /** Small bar chart for a daily series. Server-rendered SVG, no client JS; the table-free summary is in the title. */
-export function TrendChart({ label, points, accent = "#ff6719" }: { label: string; points: DailyPoint[]; accent?: string }) {
-  const total = points.reduce((s, p) => s + p.value, 0);
-  const last7 = points.slice(-7).reduce((s, p) => s + p.value, 0);
-  const prev7 = points.slice(-14, -7).reduce((s, p) => s + p.value, 0);
-  const max = Math.max(1, ...points.map((p) => p.value));
+export function TrendChart({ label, points = [], accent = "#ff6719" }: { label: string; points?: DailyPoint[]; accent?: string }) {
+  const pts = points ?? [];
+  const total = pts.reduce((s, p) => s + (p?.value ?? 0), 0);
+  const last7 = pts.slice(-7).reduce((s, p) => s + (p?.value ?? 0), 0);
+  const prev7 = pts.slice(-14, -7).reduce((s, p) => s + (p?.value ?? 0), 0);
+  const max = Math.max(1, ...pts.map((p) => p?.value ?? 0));
   const w = 300;
   const h = 56;
   const gap = 2;
-  const bw = (w - gap * (points.length - 1)) / points.length;
+  const len = Math.max(1, pts.length);
+  const bw = (w - gap * (len - 1)) / len;
   const delta = last7 - prev7;
 
   return (
