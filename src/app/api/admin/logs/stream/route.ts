@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/security";
+import { assertCapability } from "@/lib/admin-access";
 import { AdminAuthConfigError, adminAuthHeaders } from "@/lib/admin-token";
 
 export const dynamic = "force-dynamic";
@@ -7,6 +8,8 @@ export async function GET(request: Request) {
   try {
     // 1. Authenticate that the user is an authorized admin
     const session = await requireAdmin();
+    // The Logs menu item is hidden from other roles, but server logs must also be closed to a direct request.
+    await assertCapability(session, "VIEW_LOGS");
     const adminEmail = session.user?.email ?? "";
 
     const backendUrl = process.env.BACKEND_API_URL || "http://localhost:8080";

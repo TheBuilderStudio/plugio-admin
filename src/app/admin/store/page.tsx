@@ -12,11 +12,13 @@ import { MoneyView } from "@/components/store/MoneyView";
 import { ListToolbar, resultSummary } from "@/components/shared/ListToolbar";
 import { parseRange } from "@/lib/report-params";
 import { PayoutSettingsForm } from "@/components/store/PayoutSettingsForm";
+import { KycDocuments } from "@/components/store/KycDocuments";
 import { Badge } from "@/components/ui/badge";
 import { statusTone, statusLabel } from "@/lib/status-tone";
 import { formatDateTime } from "@/lib/utils";
 import {
   approveKycAction,
+  openKycDocumentsAction,
   cancelBatchAction,
   createSettlementAction,
   settleBatchAction,
@@ -155,6 +157,7 @@ async function CommissionTab({ actor }: { actor: string }) {
         minRupees={String(payout.minPayoutMinor / 100)}
         floorRupees={String(payout.withdrawAllFloorMinor / 100)}
         holdDays={String(payout.holdDays ?? 7)}
+        firstPayoutDelayDays={String(payout.firstPayoutDelayDays ?? 3)}
         version={payout.version}
         updatedBy={payout.updatedBy}
         updatedAt={payout.updatedAt ? formatDateTime(payout.updatedAt) : null}
@@ -458,7 +461,7 @@ async function KycTab({ actor, status, page }: { actor: string; status: string; 
           <div className="overflow-x-auto">
             <table className="admin-table">
               <thead>
-                <tr><th>Creator</th><th>Name and PAN</th><th>Payout account</th><th>Submitted</th><th>Action</th></tr>
+                <tr><th>Creator</th><th>Name and PAN</th><th>Payout account</th><th>Documents</th><th>Submitted</th><th>Action</th></tr>
               </thead>
               <tbody>
                 {result.items.map((k) => (
@@ -478,12 +481,15 @@ async function KycTab({ actor, status, page }: { actor: string; status: string; 
                         {k.nameMatchesPayout ? "Name matches the account holder" : "Name differs from the account holder"}
                       </p>
                     </td>
+                    <td className="min-w-[190px]">
+                      <KycDocuments sellerId={k.sellerId} complete={k.documentsComplete} action={openKycDocumentsAction} />
+                    </td>
                     <td className="whitespace-nowrap text-[12.5px]">{formatDateTime(k.submittedAt)}</td>
                     <td>
                       {k.status === "PENDING" ? (
                         <div className="flex flex-col gap-2">
                           <StoreRowAction label="Approve" fieldLabel={null} confirmLabel="Confirm approval"
-                            disabled={!k.payoutDestination} action={approveKycAction.bind(null, k.sellerId)} />
+                            disabled={!k.payoutDestination || !k.documentsComplete} action={approveKycAction.bind(null, k.sellerId)} />
                           <StoreRowAction label="Reject" fieldLabel="Reason" tone="danger" confirmLabel="Reject"
                             action={rejectKycAction.bind(null, k.sellerId)} />
                         </div>

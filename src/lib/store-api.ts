@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { KycDocumentLink } from "@/types";
+
 import { getActiveDbContext } from "@/lib/db";
 import { AdminAuthConfigError, adminAuthHeaders } from "@/lib/admin-token";
 import { resolveBackendUrl } from "@/lib/backend-url";
@@ -48,6 +50,8 @@ export interface StoreKyc {
   nameMatchesPayout: boolean;
   /** Another creator with a pending or approved verification uses the same PAN. */
   duplicatePan: boolean;
+  /** Both the PAN card and the account proof have been uploaded. */
+  documentsComplete: boolean;
   rejectReason: string | null;
   reviewedBy: string | null;
   submittedAt: string;
@@ -197,7 +201,7 @@ export interface SellerStatement {
   page: { rows: SellerStatementRow[]; page: number; size: number; total: number; totalPages: number };
 }
 
-export type KycGate = "NOT_REQUIRED" | "APPROVED" | "NOT_SUBMITTED" | "PENDING" | "REJECTED" | "STALE";
+export type KycGate = "NOT_REQUIRED" | "APPROVED" | "WAITING" | "NOT_SUBMITTED" | "PENDING" | "REJECTED" | "STALE";
 
 /** A creator's payout account and identity check, available even before they submit a PAN. */
 export interface SellerPayoutAccount {
@@ -224,6 +228,8 @@ export interface PayoutSettings {
   minPayoutMinor: number;
   withdrawAllFloorMinor: number;
   holdDays: number;
+  /** Days a creator waits after a payout account is approved before withdrawing to it (0 turns it off). */
+  firstPayoutDelayDays: number;
   version: number;
   updatedBy: string | null;
   updatedAt: string | null;
@@ -480,6 +486,9 @@ export const storeApi = {
     call<StorePayout>(actor, `/payouts/${encodeURIComponent(id)}/reject`, { method: "POST", body: { reason } }),
   kyc: (actor: string, status: string, page: number) =>
     call<StorePage<StoreKyc>>(actor, `/kyc?status=${encodeURIComponent(status)}&page=${page}`),
+  /** Short-lived links to a creator's identity documents. Needs its own backend permission; every call is audited there. */
+  kycDocuments: (actor: string, sellerId: string) =>
+    call<KycDocumentLink[]>(actor, `/kyc/${encodeURIComponent(sellerId)}/documents`),
   approveKyc: (actor: string, sellerId: string) =>
     call<StoreKyc>(actor, `/kyc/${encodeURIComponent(sellerId)}/approve`, { method: "POST", body: {} }),
   rejectKyc: (actor: string, sellerId: string, reason: string) =>
@@ -522,7 +531,7 @@ export const storeApi = {
     call<{ result: "REFUNDED" | "IN_PROGRESS"; item: PaymentExceptionRow }>(
       actor, `/exceptions/${encodeURIComponent(id)}/refund-session`, { method: "POST" }),
   payoutSettings: (actor: string) => call<PayoutSettings>(actor, "/payout-settings"),
-  updatePayoutSettings: (actor: string, body: { minPayoutMinor: number; withdrawAllFloorMinor: number; holdDays: number; version: number }) =>
+  updatePayoutSettings: (actor: string, body: { minPayoutMinor: number; withdrawAllFloorMinor: number; holdDays: number; firstPayoutDelayDays: number; version: number }) =>
     call<PayoutSettings>(actor, "/payout-settings", { method: "PUT", body }),
   /** After the gateway ruled a dispute lost: creator debited, platform fee returned, downloads blocked or session cancelled. */
   confirmDisputeLoss: (actor: string, id: string) =>

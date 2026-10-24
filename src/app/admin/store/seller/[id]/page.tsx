@@ -215,6 +215,7 @@ const GATE_LABEL: Record<KycGate, { text: string; cls: string }> = {
   PENDING: { text: "Identity check waiting for review", cls: "bg-amber-50 text-amber-700" },
   REJECTED: { text: "Identity check rejected", cls: "bg-red-50 text-red-700" },
   STALE: { text: "Payout account changed after verification", cls: "bg-amber-50 text-amber-700" },
+  WAITING: { text: "Verified, in the first-payout waiting period", cls: "bg-amber-50 text-amber-700" },
   NOT_SUBMITTED: { text: "Identity check not submitted", cls: "bg-stone-100 text-stone-700" },
   NOT_REQUIRED: { text: "Identity check not required", cls: "bg-stone-100 text-stone-700" },
 };

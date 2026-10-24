@@ -6,7 +6,7 @@
  */
 
 import { revalidatePath } from "next/cache";
-import { requireWritableAdmin } from "@/lib/security";
+import { requireAdmin, requireWritableAdmin } from "@/lib/security";
 import { storeApi } from "@/lib/store-api";
 import { logAdminAction } from "@/lib/logger";
 import type { ActionResult } from "@/types";
@@ -96,7 +96,7 @@ export async function updateCommissionPolicyAction(digital: string, bookings: st
 }
 
 /** Saves the minimum payout and the withdraw-all floor (whole rupees). The server validates the range, checks the version and audits it. */
-export async function updatePayoutSettingsAction(minRupees: string, floorRupees: string, holdDays: string, version: number): Promise<ActionResult> {
+export async function updatePayoutSettingsAction(minRupees: string, floorRupees: string, holdDays: string, firstPayoutDelayDays: string, version: number): Promise<ActionResult> {
   try {
     const session = await requireWritableAdmin();
     const adminEmail = session.user?.email;
@@ -107,9 +107,11 @@ export async function updatePayoutSettingsAction(minRupees: string, floorRupees:
     if (!/^\d{1,6}$/.test(floorText)) return { success: false, message: "Enter a whole number of rupees for the withdraw-all floor." };
     const holdText = holdDays.trim();
     if (!/^\d{1,2}$/.test(holdText)) return { success: false, message: "Enter the hold period as whole days (0 to 90)." };
+    const waitText = firstPayoutDelayDays.trim();
+    if (!/^\d{1,2}$/.test(waitText) || Number(waitText) > 30) return { success: false, message: "Enter the first-payout wait as whole days (0 to 30)." };
     if (!Number.isInteger(version) || version < 0) return { success: false, message: "Reload the page and try again." };
-    const saved = await storeApi.updatePayoutSettings(adminEmail, { minPayoutMinor: Number(text) * 100, withdrawAllFloorMinor: Number(floorText) * 100, holdDays: Number(holdText), version });
-    logAdminAction({ action: "STORE_PAYOUT_SETTINGS_UPDATE", adminEmail, details: `min=${saved.minPayoutMinor / 100} floor=${saved.withdrawAllFloorMinor / 100} hold=${saved.holdDays} v${saved.version}` });
+    const saved = await storeApi.updatePayoutSettings(adminEmail, { minPayoutMinor: Number(text) * 100, withdrawAllFloorMinor: Number(floorText) * 100, holdDays: Number(holdText), firstPayoutDelayDays: Number(waitText), version });
+    logAdminAction({ action: "STORE_PAYOUT_SETTINGS_UPDATE", adminEmail, details: `min=${saved.minPayoutMinor / 100} floor=${saved.withdrawAllFloorMinor / 100} hold=${saved.holdDays} firstWait=${saved.firstPayoutDelayDays} v${saved.version}` });
     revalidatePath("/admin/store");
     return { success: true, message: "Payout rules saved. They apply to new requests now." };
   } catch (error) {
@@ -219,4 +221,26 @@ export async function suspendProductAction(id: string, reason: string): Promise<
 
 export async function unsuspendProductAction(id: string): Promise<ActionResult> {
   return run(id, {}, "STORE_PRODUCT_UNSUSPEND", "Product restored to draft.", (a) => storeApi.unsuspend(a, id));
+}
+
+/**
+ * Opens a creator's identity documents: asks the backend for short-lived links. The backend decides who may (its own
+ * permission) and records each document opened; the admin audit log here records the request too.
+ */
+export async function openKycDocumentsAction(sellerId: string): Promise<ActionResult> {
+  try {
+    const session = await requireAdmin();
+    const adminEmail = session.user?.email;
+    if (!adminEmail) return { success: false, message: "No admin email on session." };
+    if (!ID_PATTERN.test(sellerId)) return { success: false, message: "Invalid id." };
+    const documents = await storeApi.kycDocuments(adminEmail, sellerId);
+    logAdminAction({ action: "STORE_KYC_DOCUMENTS_VIEW", adminEmail, details: `${sellerId} documents=${documents.length}` });
+    return {
+      success: true,
+      message: documents.length === 0 ? "No documents uploaded yet." : "Links are ready. They work for 5 minutes.",
+      kycDocuments: documents,
+    };
+  } catch (error) {
+    return fail(error, "Could not open the documents.");
+  }
 }

@@ -1,4 +1,5 @@
-import { requireAdmin } from "@/lib/security";
+import { requireAdmin, getAdminEmail } from "@/lib/security";
+import { logAdminAction } from "@/lib/logger";
 import { pool } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { csvCell } from "@/lib/csv";
@@ -6,7 +7,7 @@ import { csvCell } from "@/lib/csv";
 export async function GET() {
   try {
     // 1. Ensure caller is an admin
-    await requireAdmin();
+    const session = await requireAdmin();
 
     // 2. Fetch all users and subscription statuses
     const [rows] = await pool.execute<any[]>(
@@ -56,6 +57,8 @@ export async function GET() {
     }
 
     const csvString = csvRows.join("\n");
+
+    logAdminAction({ action: "USERS_EXPORT", adminEmail: getAdminEmail(session), details: `${rows.length} creators` });
 
     // 4. Return as downloadable file
     return new NextResponse(csvString, {

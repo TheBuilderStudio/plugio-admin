@@ -8,6 +8,7 @@ import { updateBillingPlanSettings } from "@/lib/db/queries";
 import { logAdminAction } from "@/lib/logger";
 import { invalidateAdminOverview } from "@/lib/db/admin-overview";
 import { type AdminPlanCatalog } from "@/constants";
+import { planPriceProblem } from "@/lib/plan-price-sanity";
 import { MIN_PAID_CENTS, MIN_PAID_PAISE } from "@/lib/plan-coupon-preview";
 import type { ActionResult } from "@/types";
 
@@ -120,6 +121,13 @@ export async function updatePlanCatalogAction(input: {
         },
       },
     };
+
+    const priceProblem =
+      planPriceProblem("USD", catalog.CREATOR, catalog.PRO) ??
+      planPriceProblem("INR", catalog.inr.CREATOR, catalog.inr.PRO);
+    if (priceProblem) {
+      throw new ValidationError(priceProblem);
+    }
 
     await updateBillingPlanSettings({
       catalog,

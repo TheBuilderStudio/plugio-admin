@@ -12,6 +12,7 @@ export function PayoutSettingsForm({
   minRupees,
   floorRupees,
   holdDays,
+  firstPayoutDelayDays,
   version,
   updatedBy,
   updatedAt,
@@ -20,10 +21,11 @@ export function PayoutSettingsForm({
   minRupees: string;
   floorRupees: string;
   holdDays: string;
+  firstPayoutDelayDays: string;
   version: number;
   updatedBy: string | null;
   updatedAt: string | null;
-  action: (minRupees: string, floorRupees: string, holdDays: string, version: number) => Promise<ActionResult>;
+  action: (minRupees: string, floorRupees: string, holdDays: string, firstPayoutDelayDays: string, version: number) => Promise<ActionResult>;
 }) {
   const router = useRouter();
   const [value, setValue] = useState(minRupees);
@@ -31,7 +33,8 @@ export function PayoutSettingsForm({
   const [pending, start] = useTransition();
   const [floor, setFloor] = useState(floorRupees);
   const [hold, setHold] = useState(holdDays);
-  const dirty = value !== minRupees || floor !== floorRupees || hold !== holdDays;
+  const [firstWait, setFirstWait] = useState(firstPayoutDelayDays);
+  const dirty = value !== minRupees || floor !== floorRupees || hold !== holdDays || firstWait !== firstPayoutDelayDays;
 
   return (
     <form
@@ -39,7 +42,7 @@ export function PayoutSettingsForm({
       onSubmit={(e) => {
         e.preventDefault();
         start(async () => {
-          const result = await action(value, floor, hold, version);
+          const result = await action(value, floor, hold, firstWait, version);
           setMessage({ ok: result.success, text: result.message });
           if (result.success) router.refresh();
         });
@@ -83,6 +86,17 @@ export function PayoutSettingsForm({
           aria-label="Safety window in days"
         />
         <span className="block text-[11.5px] text-(--ink-mute)">Days after a sale before its money can be withdrawn (0 to 90). Applies to sales made after you save; earlier sales keep their release date.</span>
+      </label>
+      <label className="block space-y-1.5">
+        <span className="block text-[12.5px] font-semibold text-(--ink)">First-payout wait (days)</span>
+        <input
+          className="h-9 w-32 rounded-lg border border-(--line) bg-white px-2 text-[13px] tabular-nums"
+          inputMode="numeric"
+          value={firstWait}
+          onChange={(e) => setFirstWait(e.target.value)}
+          aria-label="First-payout wait in days"
+        />
+        <span className="block text-[11.5px] text-(--ink-mute)">After a creator&apos;s payout account is approved (the first time, or after they change it) they cannot withdraw to it for this many days (0 to 30, 0 turns it off). It protects against someone redirecting money to a new account.</span>
       </label>
       <div className="flex flex-wrap items-center gap-3">
         <button

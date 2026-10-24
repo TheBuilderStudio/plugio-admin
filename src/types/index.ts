@@ -320,11 +320,14 @@ export interface AdminAuditLog {
     | "STORE_SETTLEMENT_SETTLE"
     | "STORE_SETTLEMENT_CANCEL"
     | "STORE_SETTLEMENT_EXPORT"
+    | "USERS_EXPORT"
+    | "BETA_EXPORT"
     | "REPORT_EXPORT"
     | "ADMIN_GRANT"
     | "ADMIN_DEACTIVATE"
     | "ADMIN_ACTIVATE"
     | "STORE_KYC_APPROVE"
+    | "STORE_KYC_DOCUMENTS_VIEW"
     | "STORE_KYC_REJECT"
     | "STORE_PRODUCT_SUSPEND"
     | "STORE_PRODUCT_UNSUSPEND"
@@ -352,10 +355,22 @@ export interface AdminAuditLog {
 }
 
 /** Server action result */
+/** A short-lived link to one identity document, as the admin app receives it from the backend. */
+export interface KycDocumentLink {
+  id: string;
+  kind: "PAN_CARD" | "BANK_PROOF";
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  url: string;
+  expiresInSeconds: number;
+}
+
 export interface ActionResult {
   success: boolean;
   message: string;
   error?: string;
+  kycDocuments?: KycDocumentLink[];
   outreachScript?: string;
   couponCode?: string | null;
 }

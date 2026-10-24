@@ -1,11 +1,12 @@
-import { requireAdmin } from "@/lib/security";
+import { requireAdmin, getAdminEmail } from "@/lib/security";
+import { logAdminAction } from "@/lib/logger";
 import { pool } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { csvCell } from "@/lib/csv";
 
 export async function GET() {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
 
     // Same source as the Beta queue UI (users with applications) — not a separate beta_requests table.
     const [rows] = await pool.execute<any[]>(
@@ -66,6 +67,7 @@ export async function GET() {
       );
     }
 
+    logAdminAction({ action: "BETA_EXPORT", adminEmail: getAdminEmail(session), details: `${rows.length} applicants` });
     return new NextResponse(csvRows.join("\n"), {
       status: 200,
       headers: {

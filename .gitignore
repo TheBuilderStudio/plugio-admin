@@ -42,3 +42,5 @@ ARCHITECTURE_*.md
 !README.md
 !SECURITY.md
 
+
+.admin-keys.generated

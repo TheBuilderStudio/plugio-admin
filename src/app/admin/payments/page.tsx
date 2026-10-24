@@ -42,6 +42,7 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
                     <th>Event</th>
                     <th>User</th>
                     <th>Provider</th>
+                    <th>Details</th>
                     <th>When</th>
                   </tr>
                 </thead>
@@ -80,6 +81,9 @@ export default async function PaymentsPage({ searchParams }: PaymentsPageProps) 
                         {log.order_id ? (
                           <p className="mt-1 font-mono text-[11px] text-(--ink-mute)">{log.order_id}</p>
                         ) : null}
+                      </td>
+                      <td className="max-w-[320px] break-words text-[12px] text-(--ink-soft)">
+                        {(log.details ?? "").replace(/^userEmail=[^,]*,?\s*/, "") || "—"}
                       </td>
                       <td className="whitespace-nowrap text-(--ink-soft)">
                         {formatDateTime(log.created_at)}

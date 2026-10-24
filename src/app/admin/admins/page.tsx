@@ -1,5 +1,5 @@
 import { UserCog } from "lucide-react";
-import { requireAdmin } from "@/lib/security";
+import { requireCapability } from "@/lib/admin-access";
 import { adminUsersApi, type BackendAdmin } from "@/lib/store-api";
 import { AdminPage, AdminPageHeader, AdminCard } from "@/components/ui/page-shell";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -26,7 +26,7 @@ async function load(actor: string): Promise<{ admins: BackendAdmin[] } | { error
 }
 
 export default async function AdminsPage() {
-  const session = await requireAdmin();
+  const session = await requireCapability("MANAGE_ADMINS");
   const actor = session.user?.email ?? "";
   const result = await load(actor);
 
