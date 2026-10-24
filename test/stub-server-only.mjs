@@ -1,14 +1,13 @@
 // Test-only module hooks, so plain Node can load app modules:
 //  - `server-only` is resolved by Next's bundler, not from node_modules: make it an empty module.
 //  - `@/...` is the app's path alias for src/: map it to the real file.
-import { registerHooks } from "node:module";
+import * as moduleApi from "node:module";
 import { existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 const SRC = new URL("../src/", import.meta.url);
 
-registerHooks({
-  resolve(specifier, context, nextResolve) {
+export function resolve(specifier, context, nextResolve) {
     if (specifier === "server-only") {
       return { url: "data:text/javascript,", shortCircuit: true };
     }
@@ -47,5 +46,10 @@ registerHooks({
       }
     }
     return nextResolve(specifier, context);
-  },
-});
+}
+
+if (typeof moduleApi.registerHooks === "function") {
+  moduleApi.registerHooks({ resolve });
+} else if (typeof moduleApi.register === "function") {
+  moduleApi.register(import.meta.url, import.meta.url);
+}
