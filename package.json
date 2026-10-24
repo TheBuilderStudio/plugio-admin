@@ -8,7 +8,7 @@
     "build": "next build --webpack",
     "start": "next start --port 3001",
     "lint": "eslint",
-    "test": "node --experimental-default-type=module --import ./test/stub-server-only.mjs --test \"test/*.test.ts\"",
+    "test": "node --experimental-default-type=module --import ./test/stub-server-only.mjs --test test/*.test.ts",
     "test:db": "bash scripts/query-tests.sh"
   },
   "dependencies": {
